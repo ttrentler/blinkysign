@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlinkySign Remote Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        .button-container {
+            margin: 40px 0;
+        }
+        .toggle-button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 12px;
+            width: 200px;
+            height: 200px;
+            font-size: 24px;
+            transition: all 0.3s;
+        }
+        .toggle-button:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+        .toggle-button:active {
+            transform: scale(0.95);
+        }
+        .toggle-button.muted {
+            background-color: #f44336;
+        }
+        .toggle-button.muted:hover {
+            background-color: #d32f2f;
+        }
+        .status {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-left: 10px;
+            background-color: #ccc;
+        }
+        .status-indicator.on {
+            background-color: #f44336;
+        }
+        .status-indicator.off {
+            background-color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <h1>BlinkySign Remote Control</h1>
+    
+    <div class="button-container">
+        <button id="toggleButton" class="toggle-button">UNMUTED</button>
+    </div>
+    
+    <div class="status">
+        Status: <span id="statusText">Unmuted</span>
+        <span id="statusIndicator" class="status-indicator off"></span>
+    </div>
+    
+    <script>
+        // Configuration
+        const API_ENDPOINT = 'http://localhost:5000'; // Change this to your API endpoint
+        
+        // Elements
+        const toggleButton = document.getElementById('toggleButton');
+        const statusText = document.getElementById('statusText');
+        const statusIndicator = document.getElementById('statusIndicator');
+        
+        // State
+        let isMuted = false;
+        
+        // Update UI based on state
+        function updateUI() {
+            if (isMuted) {
+                toggleButton.textContent = 'MUTED';
+                toggleButton.classList.add('muted');
+                statusText.textContent = 'Muted';
+                statusIndicator.classList.remove('off');
+                statusIndicator.classList.add('on');
+            } else {
+                toggleButton.textContent = 'UNMUTED';
+                toggleButton.classList.remove('muted');
+                statusText.textContent = 'Unmuted';
+                statusIndicator.classList.remove('on');
+                statusIndicator.classList.add('off');
+            }
+        }
+        
+        // Send toggle request
+        async function toggleMute() {
+            try {
+                const response = await fetch(`${API_ENDPOINT}/toggle`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    isMuted = data.state.muted;
+                    updateUI();
+                    console.log(`Status toggled to: ${isMuted ? 'muted' : 'unmuted'}`);
+                } else {
+                    console.error('Failed to toggle status');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        // Get current status
+        async function getStatus() {
+            try {
+                const response = await fetch(`${API_ENDPOINT}/status`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    isMuted = data.muted;
+                    updateUI();
+                    console.log(`Current status: ${isMuted ? 'muted' : 'unmuted'}`);
+                } else {
+                    console.error('Failed to get status');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        // Event listeners
+        toggleButton.addEventListener('click', toggleMute);
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', getStatus);
+        
+        // Periodically update status (every 5 seconds)
+        setInterval(getStatus, 5000);
+    </script>
+</body>
+</html>
