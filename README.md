@@ -30,6 +30,43 @@ BlinkySign is a Raspberry Pi-powered LED sign that uses WS2812B LED strips to in
 - AWS account with access to IoT Core and API Gateway
 - Dependencies listed in requirements.txt
 
+## AWS Setup
+
+The project uses AWS IoT Core and API Gateway. You can deploy the required AWS resources using the CloudFormation template:
+
+```bash
+# Deploy the CloudFormation stack
+aws cloudformation deploy \
+  --template-file cloudformation.yaml \
+  --stack-name blinkysign \
+  --capabilities CAPABILITY_IAM
+
+# Get the outputs from the stack
+aws cloudformation describe-stacks \
+  --stack-name blinkysign \
+  --query 'Stacks[0].Outputs'
+```
+
+After deployment, you'll need to save the certificate and private key to the `certs/` directory:
+
+```bash
+mkdir -p certs
+aws cloudformation describe-stacks \
+  --stack-name blinkysign \
+  --query 'Stacks[0].Outputs[?OutputKey==`CertificatePem`].OutputValue' \
+  --output text > certs/certificate.pem
+
+aws cloudformation describe-stacks \
+  --stack-name blinkysign \
+  --query 'Stacks[0].Outputs[?OutputKey==`PrivateKey`].OutputValue' \
+  --output text > certs/private.key
+
+aws cloudformation describe-stacks \
+  --stack-name blinkysign \
+  --query 'Stacks[0].Outputs[?OutputKey==`IoTEndpoint`].OutputValue' \
+  --output text > certs/endpoint.txt
+```
+
 ## Getting Started
 
 1. Clone this repository to your Raspberry Pi
@@ -39,10 +76,7 @@ BlinkySign is a Raspberry Pi-powered LED sign that uses WS2812B LED strips to in
    ./setup.sh
    ```
 3. Edit the `.env` file with your AWS credentials and LED configuration
-4. Set up AWS resources:
-   ```
-   python aws_setup.py
-   ```
+4. Deploy AWS resources using CloudFormation (see AWS Setup section)
 5. Start the local server:
    ```
    python app.py

@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for BlinkySign project'
+
+Parameters:
+  ThingName:
+    Type: String
+    Default: blinkysign
+    Description: Name of the IoT Thing
+
+Resources:
+  # IoT Thing
+  BlinkySignThing:
+    Type: AWS::IoT::Thing
+    Properties:
+      ThingName: !Ref ThingName
+      ThingTypeName: LED_SIGN
+
+  # IoT Policy
+  BlinkySignPolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      PolicyName: !Sub "${ThingName}_policy"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'iot:Connect'
+              - 'iot:Publish'
+              - 'iot:Subscribe'
+              - 'iot:Receive'
+            Resource:
+              - !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:client/${ThingName}"
+              - !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/${ThingName}/*"
+              - !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topicfilter/${ThingName}/*"
+
+  # IoT Certificate
+  BlinkySignCertificate:
+    Type: AWS::IoT::Certificate
+    Properties:
+      CertificateSigningRequest: !Ref AWS::NoValue
+      Status: ACTIVE
+
+  # Attach Policy to Certificate
+  BlinkySignPolicyAttachment:
+    Type: AWS::IoT::PolicyPrincipalAttachment
+    Properties:
+      PolicyName: !Ref BlinkySignPolicy
+      Principal: !GetAtt BlinkySignCertificate.Arn
+
+  # Attach Certificate to Thing
+  BlinkySignThingPrincipalAttachment:
+    Type: AWS::IoT::ThingPrincipalAttachment
+    Properties:
+      ThingName: !Ref BlinkySignThing
+      Principal: !GetAtt BlinkySignCertificate.Arn
+
+  # API Gateway
+  BlinkySignApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${ThingName}-api"
+      Description: API for controlling BlinkySign
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # API Resource
+  StatusResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref BlinkySignApi
+      ParentId: !GetAtt BlinkySignApi.RootResourceId
+      PathPart: status
+
+  # GET Method
+  GetStatusMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref BlinkySignApi
+      ResourceId: !Ref StatusResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationHttpMethod: GET
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: '{"status": "off"}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: 'Empty'
+
+  # PUT Method
+  PutStatusMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref BlinkySignApi
+      ResourceId: !Ref StatusResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationHttpMethod: PUT
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: '{"status": "updated"}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: 'Empty'
+
+  # API Deployment
+  BlinkySignApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - GetStatusMethod
+      - PutStatusMethod
+    Properties:
+      RestApiId: !Ref BlinkySignApi
+      StageName: prod
+
+Outputs:
+  ThingName:
+    Description: Name of the IoT Thing
+    Value: !Ref BlinkySignThing
+
+  CertificateId:
+    Description: ID of the IoT Certificate
+    Value: !Ref BlinkySignCertificate
+
+  CertificateArn:
+    Description: ARN of the IoT Certificate
+    Value: !GetAtt BlinkySignCertificate.Arn
+
+  CertificatePem:
+    Description: PEM content of the IoT Certificate
+    Value: !GetAtt BlinkySignCertificate.CertificatePem
+
+  PrivateKey:
+    Description: Private key for the IoT Certificate
+    Value: !GetAtt BlinkySignCertificate.KeyPair.PrivateKey
+
+  IoTEndpoint:
+    Description: IoT Endpoint for the AWS Account
+    Value: !Sub "${AWS::IoT::Endpoint}"
+
+  ApiEndpoint:
+    Description: URL of the API Gateway endpoint
+    Value: !Sub "https://${BlinkySignApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+
+  ApiId:
+    Description: ID of the API Gateway
+    Value: !Ref BlinkySignApi
