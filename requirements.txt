@@ -1,5 +1,6 @@
 boto3==1.34.0
 Flask==2.3.3
-RPi.GPIO==0.7.1
 requests==2.31.0
 python-dotenv==1.0.0
+rpi_ws281x==4.3.4
+adafruit-circuitpython-neopixel==6.3.9

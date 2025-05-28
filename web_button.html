@@ -66,6 +66,42 @@
         .status-indicator.off {
             background-color: #4CAF50;
         }
+        .effects-container {
+            margin-top: 40px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .effect-button {
+            background-color: #2196F3;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .effect-button:hover {
+            background-color: #0b7dda;
+        }
+        .color-select {
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .cycles-input {
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            width: 60px;
+        }
     </style>
 </head>
 <body>
@@ -80,6 +116,32 @@
         <span id="statusIndicator" class="status-indicator off"></span>
     </div>
     
+    <div class="effects-container">
+        <h2>LED Effects</h2>
+        
+        <div>
+            <button id="rainbowButton" class="effect-button">Rainbow Effect</button>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <select id="colorSelect" class="color-select">
+                <option value="red">Red</option>
+                <option value="green">Green</option>
+                <option value="blue" selected>Blue</option>
+                <option value="yellow">Yellow</option>
+                <option value="purple">Purple</option>
+                <option value="cyan">Cyan</option>
+                <option value="white">White</option>
+            </select>
+            <input type="number" id="cyclesInput" class="cycles-input" value="3" min="1" max="10">
+            <button id="pulseButton" class="effect-button">Pulse Effect</button>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button id="offButton" class="effect-button">Turn Off LEDs</button>
+        </div>
+    </div>
+    
     <script>
         // Configuration
         const API_ENDPOINT = 'http://localhost:5000'; // Change this to your API endpoint
@@ -88,6 +150,11 @@
         const toggleButton = document.getElementById('toggleButton');
         const statusText = document.getElementById('statusText');
         const statusIndicator = document.getElementById('statusIndicator');
+        const rainbowButton = document.getElementById('rainbowButton');
+        const pulseButton = document.getElementById('pulseButton');
+        const offButton = document.getElementById('offButton');
+        const colorSelect = document.getElementById('colorSelect');
+        const cyclesInput = document.getElementById('cyclesInput');
         
         // State
         let isMuted = false;
@@ -150,8 +217,72 @@
             }
         }
         
+        // Trigger rainbow effect
+        async function triggerRainbow() {
+            try {
+                const response = await fetch(`${API_ENDPOINT}/effects/rainbow`, {
+                    method: 'PUT'
+                });
+                
+                if (response.ok) {
+                    console.log('Rainbow effect triggered');
+                } else {
+                    console.error('Failed to trigger rainbow effect');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        // Trigger pulse effect
+        async function triggerPulse() {
+            try {
+                const color = colorSelect.value;
+                const cycles = parseInt(cyclesInput.value) || 3;
+                
+                const response = await fetch(`${API_ENDPOINT}/effects/pulse`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        color: color,
+                        cycles: cycles
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log(`Pulse effect triggered with color ${color}`);
+                } else {
+                    console.error('Failed to trigger pulse effect');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        // Turn off LEDs
+        async function turnOffLEDs() {
+            try {
+                const response = await fetch(`${API_ENDPOINT}/off`, {
+                    method: 'PUT'
+                });
+                
+                if (response.ok) {
+                    console.log('LEDs turned off');
+                } else {
+                    console.error('Failed to turn off LEDs');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
         // Event listeners
         toggleButton.addEventListener('click', toggleMute);
+        rainbowButton.addEventListener('click', triggerRainbow);
+        pulseButton.addEventListener('click', triggerPulse);
+        offButton.addEventListener('click', turnOffLEDs);
         
         // Initialize
         document.addEventListener('DOMContentLoaded', getStatus);

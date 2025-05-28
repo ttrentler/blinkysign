@@ -8,9 +8,9 @@ import json
 import time
 import logging
 import threading
-import RPi.GPIO as GPIO
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
 from dotenv import load_dotenv
+from led_controller import led_controller
 
 # Load environment variables
 load_dotenv()
@@ -25,11 +25,6 @@ logger = logging.getLogger(__name__)
 # Configuration
 IOT_ENDPOINT = os.getenv('IOT_ENDPOINT')
 THING_NAME = os.getenv('IOT_THING_NAME', 'blinkysign')
-LED_PIN = int(os.getenv('LED_PIN', 18))
-
-# GPIO setup
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(LED_PIN, GPIO.OUT)
 
 # Current state
 current_state = {
@@ -40,12 +35,12 @@ current_state = {
 def update_led_state():
     """Update the LED based on current state"""
     if current_state["muted"]:
-        GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on LED when muted
+        led_controller.set_muted()
         current_state["led_on"] = True
     else:
-        GPIO.output(LED_PIN, GPIO.LOW)   # Turn off LED when unmuted
-        current_state["led_on"] = False
-    logger.info(f"LED state updated: {'ON' if current_state['led_on'] else 'OFF'}")
+        led_controller.set_unmuted()
+        current_state["led_on"] = True
+    logger.info(f"LED state updated: {'MUTED' if current_state['muted'] else 'UNMUTED'}")
 
 def status_callback(client, userdata, message):
     """Callback when status messages are received"""
@@ -82,6 +77,50 @@ def toggle_callback(client, userdata, message):
     except Exception as e:
         logger.error(f"Error processing toggle: {e}")
 
+def effect_callback(client, userdata, message):
+    """Callback when effect messages are received"""
+    try:
+        payload = json.loads(message.payload.decode('utf-8'))
+        logger.info(f"Received effect command: {payload}")
+        
+        effect = payload.get("effect", "")
+        
+        if effect == "rainbow":
+            led_controller.rainbow_cycle()
+        elif effect == "pulse":
+            color_name = payload.get("color", "blue").lower()
+            cycles = int(payload.get("cycles", 3))
+            
+            # Map color names to RGB values
+            color_map = {
+                "red": (255, 0, 0),
+                "green": (0, 255, 0),
+                "blue": (0, 0, 255),
+                "yellow": (255, 255, 0),
+                "purple": (128, 0, 128),
+                "cyan": (0, 255, 255),
+                "white": (255, 255, 255)
+            }
+            
+            rgb_color = color_map.get(color_name, (0, 0, 255))  # Default to blue
+            led_controller.pulse(rgb_color, cycles=cycles)
+        elif effect == "off":
+            led_controller.turn_off()
+            current_state["led_on"] = False
+        
+        # Return to normal state after effect (unless turned off)
+        if effect != "off":
+            update_led_state()
+        
+        # Publish state update
+        mqtt_client.publish(
+            f"{THING_NAME}/state",
+            json.dumps(current_state),
+            0
+        )
+    except Exception as e:
+        logger.error(f"Error processing effect: {e}")
+
 def connect_to_iot():
     """Connect to AWS IoT Core"""
     # Initialize MQTT client
@@ -102,13 +141,15 @@ def connect_to_iot():
     
     # Connect
     logger.info(f"Connecting to AWS IoT Core at {IOT_ENDPOINT}...")
+    led_controller.set_connecting()  # Show connecting state
     mqtt_client.connect()
     logger.info("Connected to AWS IoT Core")
     
     # Subscribe to topics
     mqtt_client.subscribe(f"{THING_NAME}/status", 1, status_callback)
     mqtt_client.subscribe(f"{THING_NAME}/toggle", 1, toggle_callback)
-    logger.info(f"Subscribed to {THING_NAME}/status and {THING_NAME}/toggle topics")
+    mqtt_client.subscribe(f"{THING_NAME}/effect", 1, effect_callback)
+    logger.info(f"Subscribed to {THING_NAME} topics")
     
     # Publish initial state
     mqtt_client.publish(
@@ -155,6 +196,6 @@ if __name__ == "__main__":
             
     except Exception as e:
         logger.error(f"Error: {e}")
-    finally:
-        # Clean up GPIO on exit
-        GPIO.cleanup()
+        led_controller.set_error()
+        time.sleep(2)
+        led_controller.turn_off()
