@@ -1,6 +1,6 @@
 # BlinkySign
 
-A project for creating an internet-connected 3D printed sign controlled via AWS.
+A project for creating an internet-connected 3D printed sign controlled via Raspberry Pi.
 
 ## Description
 
@@ -8,7 +8,7 @@ BlinkySign is a Raspberry Pi-powered LED sign that uses WS2812B LED strips to in
 
 ## Features
 
-- Control up to 4 WS2812B LED strips from a single Raspberry Pi
+- Control WS2812B LED strips from a Raspberry Pi using SPI interface
 - Remote control via HTTP requests
 - AWS IoT Core integration for reliable connectivity
 - Simple REST API for status control
@@ -17,8 +17,8 @@ BlinkySign is a Raspberry Pi-powered LED sign that uses WS2812B LED strips to in
 
 ## Hardware Requirements
 
-- Raspberry Pi (Nano or other model)
-- Up to 4 WS2812B LED strips
+- Raspberry Pi (Pi 5 recommended for SPI interface)
+- WS2812B LED strips
 - Jumper wires
 - 5V power supply (adequate for your LED strips)
 - 3D printed enclosure (see 3dprints folder)
@@ -32,40 +32,19 @@ BlinkySign is a Raspberry Pi-powered LED sign that uses WS2812B LED strips to in
 
 ## AWS Setup
 
-The project uses AWS IoT Core and API Gateway. You can deploy the required AWS resources using the CloudFormation template:
+The project uses AWS IoT Core and API Gateway. You can set up the required AWS resources using the provided script:
 
 ```bash
-# Deploy the CloudFormation stack
-aws cloudformation deploy \
-  --template-file cloudformation.yaml \
-  --stack-name blinkysign \
-  --capabilities CAPABILITY_IAM
-
-# Get the outputs from the stack
-aws cloudformation describe-stacks \
-  --stack-name blinkysign \
-  --query 'Stacks[0].Outputs'
+# Run the AWS setup script
+python aws_setup.py
 ```
 
-After deployment, you'll need to save the certificate and private key to the `certs/` directory:
-
-```bash
-mkdir -p certs
-aws cloudformation describe-stacks \
-  --stack-name blinkysign \
-  --query 'Stacks[0].Outputs[?OutputKey==`CertificatePem`].OutputValue' \
-  --output text > certs/certificate.pem
-
-aws cloudformation describe-stacks \
-  --stack-name blinkysign \
-  --query 'Stacks[0].Outputs[?OutputKey==`PrivateKey`].OutputValue' \
-  --output text > certs/private.key
-
-aws cloudformation describe-stacks \
-  --stack-name blinkysign \
-  --query 'Stacks[0].Outputs[?OutputKey==`IoTEndpoint`].OutputValue' \
-  --output text > certs/endpoint.txt
-```
+This script will:
+1. Create an AWS IoT Thing for your BlinkySign
+2. Create and attach the necessary policies
+3. Generate certificates and save them to the `certs/` directory
+4. Create an API Gateway for remote control
+5. Update your `.env` file with the endpoints
 
 ## Getting Started
 
@@ -76,7 +55,10 @@ aws cloudformation describe-stacks \
    ./setup.sh
    ```
 3. Edit the `.env` file with your AWS credentials and LED configuration
-4. Deploy AWS resources using CloudFormation (see AWS Setup section)
+4. Set up AWS resources using the AWS setup script:
+   ```
+   python aws_setup.py
+   ```
 5. Start the local server:
    ```
    python app.py
@@ -88,18 +70,13 @@ aws cloudformation describe-stacks \
 
 ## LED Strip Connection
 
-WS2812B LED strips require three connections:
+WS2812B LED strips with SPI interface require these connections:
 - Power (5V)
 - Ground (GND)
-- Data (GPIO pin)
+- Data (MOSI pin)
+- Clock (SCK pin)
 
-Default GPIO pins:
-- Strip 1: GPIO 18
-- Strip 2: GPIO 19
-- Strip 3: GPIO 21
-- Strip 4: GPIO 13
-
-You can configure these pins in the `.env` file.
+The default configuration uses the Raspberry Pi's SPI interface which is more compatible with Pi 5.
 
 **Important**: WS2812B strips may require a separate power supply if you're using many LEDs, as they can draw significant current. The Raspberry Pi GPIO pins cannot provide enough power for long strips.
 
@@ -147,6 +124,12 @@ python led_controller.py
 ```
 
 This will run through various colors and effects to verify your LED strips are working correctly.
+
+You can also test the SPI interface specifically with:
+
+```
+python boardtest.py
+```
 
 ## License
 

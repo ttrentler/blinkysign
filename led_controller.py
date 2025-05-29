@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 LED Controller for BlinkySign
-Controls WS2812B LED strips connected to Raspberry Pi
+Controls WS2812B LED strips connected to Raspberry Pi using SPI interface
 """
 import os
 import time
 import logging
 import board
-import neopixel
+import busio
+import neopixel_spi
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -22,10 +23,6 @@ logger = logging.getLogger(__name__)
 
 # LED Configuration
 LED_COUNT = int(os.getenv('LED_COUNT', 30))  # Number of LED pixels per strip
-LED_PIN_1 = os.getenv('LED_PIN_1', board.D18)  # GPIO pin for strip 1
-LED_PIN_2 = os.getenv('LED_PIN_2', board.D19)  # GPIO pin for strip 2
-LED_PIN_3 = os.getenv('LED_PIN_3', board.D21)  # GPIO pin for strip 3
-LED_PIN_4 = os.getenv('LED_PIN_4', board.D13)  # GPIO pin for strip 4
 LED_BRIGHTNESS = float(os.getenv('LED_BRIGHTNESS', 0.5))  # Brightness (0.0 to 1.0)
 
 # Color definitions
@@ -45,49 +42,32 @@ CONNECTING_COLOR = BLUE
 ERROR_COLOR = YELLOW
 
 class LEDController:
-    """Controller for WS2812B LED strips"""
+    """Controller for WS2812B LED strips using SPI interface"""
     
     def __init__(self):
-        """Initialize LED strips"""
+        """Initialize LED strips using SPI"""
         self.strips = []
         self.active_strips = 0
         
-        # Try to initialize each strip
+        # Try to initialize SPI bus
         try:
-            self.strips.append(neopixel.NeoPixel(
-                LED_PIN_1, LED_COUNT, brightness=LED_BRIGHTNESS, auto_write=False
-            ))
+            # Initialize main SPI bus
+            spi = busio.SPI(clock=board.SCK, MOSI=board.MOSI)
+            
+            # Create NeoPixel_SPI object
+            pixels = neopixel_spi.NeoPixel_SPI(
+                spi, LED_COUNT, brightness=LED_BRIGHTNESS, auto_write=False
+            )
+            
+            self.strips.append(pixels)
             self.active_strips += 1
-            logger.info(f"LED Strip 1 initialized on {LED_PIN_1}")
+            logger.info("SPI NeoPixel strip initialized")
+            
+            # Additional strips could be added here if multiple SPI buses are available
+            # For now, we'll use a single strip as demonstrated in boardtest.py
+            
         except Exception as e:
-            logger.error(f"Failed to initialize LED Strip 1: {e}")
-        
-        try:
-            self.strips.append(neopixel.NeoPixel(
-                LED_PIN_2, LED_COUNT, brightness=LED_BRIGHTNESS, auto_write=False
-            ))
-            self.active_strips += 1
-            logger.info(f"LED Strip 2 initialized on {LED_PIN_2}")
-        except Exception as e:
-            logger.error(f"Failed to initialize LED Strip 2: {e}")
-        
-        try:
-            self.strips.append(neopixel.NeoPixel(
-                LED_PIN_3, LED_COUNT, brightness=LED_BRIGHTNESS, auto_write=False
-            ))
-            self.active_strips += 1
-            logger.info(f"LED Strip 3 initialized on {LED_PIN_3}")
-        except Exception as e:
-            logger.error(f"Failed to initialize LED Strip 3: {e}")
-        
-        try:
-            self.strips.append(neopixel.NeoPixel(
-                LED_PIN_4, LED_COUNT, brightness=LED_BRIGHTNESS, auto_write=False
-            ))
-            self.active_strips += 1
-            logger.info(f"LED Strip 4 initialized on {LED_PIN_4}")
-        except Exception as e:
-            logger.error(f"Failed to initialize LED Strip 4: {e}")
+            logger.error(f"Failed to initialize LED strip: {e}")
         
         logger.info(f"Initialized {self.active_strips} LED strips")
     
@@ -197,6 +177,10 @@ if __name__ == "__main__":
         
         logger.info("Testing BLUE")
         led_controller.set_all_strips(BLUE)
+        time.sleep(1)
+        
+        logger.info("Testing YELLOW")
+        led_controller.set_all_strips(YELLOW)
         time.sleep(1)
         
         # Test muted/unmuted states
