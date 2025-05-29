@@ -131,6 +131,20 @@ You can also test the SPI interface specifically with:
 python boardtest.py
 ```
 
+## Cleaning Up AWS Resources
+
+When you're done with the project or want to remove all AWS resources created by it, you can use the cleanup script:
+
+```bash
+python cleanup_aws.py
+```
+
+This script will:
+1. Delete the IoT Thing
+2. Detach and delete all policies
+3. Detach, deactivate, and delete all certificates
+4. Delete the API Gateway
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
