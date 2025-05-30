@@ -30,48 +30,172 @@ BlinkySign is a Raspberry Pi-powered LED sign that uses WS2812B LED strips to in
 ## Software Requirements
 
 - Python 3.10+
-- AWS account with access to IoT Core and API Gateway
+- AWS account with access to IoT Core and API Gateway (for cloud connectivity)
 - Dependencies listed in requirements.txt
 
-## AWS Setup
+## Project Files
 
-The project uses AWS IoT Core and API Gateway. You can set up the required AWS resources using the provided script:
+The project consists of the following key files:
 
-```bash
-# Run the AWS setup script
-python aws_setup.py
-```
+- **app.py**: Flask web server that provides the HTTP API endpoints for controlling the sign
+- **iot_client.py**: Connects to AWS IoT Core and subscribes to MQTT topics to receive commands
+- **led_controller.py**: Controls the WS2812B LED strips via SPI interface
+- **aws_setup.py**: Sets up all required AWS resources (IoT Thing, API Gateway, etc.)
+- **cleanup_aws.py**: Removes all AWS resources created by the project
+- **button_client.py**: Simple client for sending commands to the sign from a remote device
+- **physical_button.py**: Controls the sign using a physical button connected to GPIO
+- **control_panel.html**: Web-based control panel for the sign
+- **web_button.html**: Simple web page with a button to toggle the sign
+- **setup.sh**: Installation script for setting up the project
+- **.env.example**: Example environment variables file
+- **requirements.txt**: Python dependencies
 
-This script will:
-1. Create an AWS IoT Thing for your BlinkySign
-2. Create and attach the necessary policies
-3. Generate certificates and save them to the `certs/` directory
-4. Create an API Gateway with API key authentication for remote control
-5. Create an API key and save it to `certs/api_key.txt`
-6. Update your `.env` file with the endpoints
-7. Update the control panel HTML with the new API endpoint
+## Installation Options
 
-## Getting Started
+You can install BlinkySign in two ways:
+1. **Local-Only Install**: For use on a local network without AWS connectivity
+2. **AWS + Local Install**: Full installation with cloud connectivity
 
-1. Clone this repository to your Raspberry Pi
-2. Run the setup script:
+### Local-Only Install
+
+If you want to run BlinkySign on a local network without AWS connectivity:
+
+1. **Clone the repository and install dependencies**:
+   ```bash
+   git clone https://github.com/ttrentler/blinkysign.git
+   cd blinkysign
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
    ```
-   chmod +x setup.sh
-   ./setup.sh
+
+2. **Create a minimal `.env` file**:
+   ```bash
+   cp .env.example .env
    ```
-3. Edit the `.env` file with your AWS credentials and LED configuration
-4. Set up AWS resources using the AWS setup script:
+   
+   Edit the `.env` file to include only the local settings:
    ```
-   python aws_setup.py
+   # Flask server port
+   PORT=5000
+   
+   # LED Configuration
+   LED_COUNT=30
+   LED_BRIGHTNESS=0.5
+   
+   # Button Configuration
+   BUTTON_PIN=17
+   
+   # API endpoint for button client (use your Raspberry Pi's local IP)
+   API_ENDPOINT=http://192.168.1.X:5000
    ```
-5. Start the local server:
-   ```
+   
+   Replace `192.168.1.X` with your Raspberry Pi's actual IP address.
+
+3. **Run the Flask server**:
+   ```bash
    python app.py
    ```
-6. Connect to AWS IoT Core:
+   
+   This will start the local HTTP server on port 5000.
+
+4. **Access the control panel**:
+   ```bash
+   python -m http.server 8000
    ```
+   
+   Then open a browser on any device on your local network and navigate to:
+   ```
+   http://192.168.1.X:8000/control_panel.html
+   ```
+   
+   Make sure to select "Local" in the API endpoint dropdown.
+
+5. **For physical button control** (optional):
+   ```bash
+   python physical_button.py
+   ```
+
+6. **For remote button control** from another device:
+   Edit the `.env` file on the remote device to point to your Raspberry Pi:
+   ```
+   API_ENDPOINT=http://192.168.1.X:5000
+   ```
+   
+   Then run:
+   ```bash
+   python button_client.py
+   ```
+
+### AWS + Local Install
+
+For full installation with cloud connectivity:
+
+1. **Clone the repository and install dependencies**:
+   ```bash
+   git clone https://github.com/ttrentler/blinkysign.git
+   cd blinkysign
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+2. **Configure AWS CLI** (if not already done):
+   ```bash
+   aws configure
+   ```
+   
+   Enter your AWS Access Key ID, Secret Access Key, default region, and output format.
+
+3. **Create a `.env` file**:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edit the `.env` file with your LED configuration:
+   ```
+   # Flask server port
+   PORT=5000
+   
+   # LED Configuration
+   LED_COUNT=30
+   LED_BRIGHTNESS=0.5
+   
+   # Button Configuration
+   BUTTON_PIN=17
+   
+   # AWS Configuration
+   AWS_REGION=us-east-1
+   ```
+
+4. **Set up AWS resources**:
+   ```bash
+   python aws_setup.py
+   ```
+   
+   This will create all necessary AWS resources and update your `.env` file with the endpoints.
+
+5. **Start the local server**:
+   ```bash
+   python app.py
+   ```
+
+6. **Connect to AWS IoT Core**:
+   ```bash
    python iot_client.py
    ```
+
+7. **Access the control panel**:
+   ```bash
+   python -m http.server 8000
+   ```
+   
+   Then open a browser and navigate to:
+   ```
+   http://localhost:8000/control_panel.html
+   ```
+   
+   You can switch between local and AWS endpoints in the control panel.
 
 ## LED Strip Connection
 
