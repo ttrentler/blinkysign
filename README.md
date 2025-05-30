@@ -32,6 +32,7 @@ BlinkySign is a Raspberry Pi-powered LED sign that uses WS2812B LED strips to in
 - Python 3.10+
 - AWS account with access to IoT Core and API Gateway (for cloud connectivity)
 - Dependencies listed in requirements.txt
+- System package: `lgpio` (install with `sudo apt-get install -y python3-lgpio`)
 
 ## Project Files
 

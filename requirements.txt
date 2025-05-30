@@ -4,3 +4,4 @@ requests==2.31.0
 python-dotenv==1.0.0
 adafruit-circuitpython-neopixel-spi==1.0.12
 AWSIoTPythonSDK==1.5.4
+lgpio==0.2.2.0
