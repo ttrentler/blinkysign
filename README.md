@@ -94,6 +94,7 @@ If you want to run BlinkySign on a local network without AWS connectivity:
 
 3. **Run the Flask server**:
    ```bash
+   source venv/bin/activate
    python app.py
    ```
    
@@ -101,6 +102,7 @@ If you want to run BlinkySign on a local network without AWS connectivity:
 
 4. **Access the control panel**:
    ```bash
+   source venv/bin/activate
    python -m http.server 8000
    ```
    
@@ -113,6 +115,7 @@ If you want to run BlinkySign on a local network without AWS connectivity:
 
 5. **For physical button control** (optional):
    ```bash
+   source venv/bin/activate
    python physical_button.py
    ```
 
@@ -124,6 +127,7 @@ If you want to run BlinkySign on a local network without AWS connectivity:
    
    Then run:
    ```bash
+   source venv/bin/activate
    python button_client.py
    ```
 
@@ -177,16 +181,19 @@ For full installation with cloud connectivity:
 
 5. **Start the local server**:
    ```bash
+   source venv/bin/activate
    python app.py
    ```
 
 6. **Connect to AWS IoT Core**:
    ```bash
+   source venv/bin/activate
    python iot_client.py
    ```
 
 7. **Access the control panel**:
    ```bash
+   source venv/bin/activate
    python -m http.server 8000
    ```
    
