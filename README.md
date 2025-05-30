@@ -319,6 +319,69 @@ You can also test the SPI interface specifically with:
 python boardtest.py
 ```
 
+## Auto-Start on Boot
+
+To configure BlinkySign to automatically start on boot:
+
+1. **Create a startup script**:
+
+```bash
+sudo nano /home/ttrentler/Desktop/code/blinkysign/startup.sh
+```
+
+Add this content:
+```bash
+#!/bin/bash
+cd /home/ttrentler/Desktop/code/blinkysign
+source venv/bin/activate
+python app.py &
+python -m http.server 8000 &
+```
+
+Make it executable:
+```bash
+chmod +x /home/ttrentler/Desktop/code/blinkysign/startup.sh
+```
+
+2. **Create a systemd service file**:
+
+```bash
+sudo nano /etc/systemd/system/blinkysign.service
+```
+
+Add this content:
+```
+[Unit]
+Description=BlinkySign Service
+After=network.target
+
+[Service]
+ExecStart=/home/ttrentler/Desktop/code/blinkysign/startup.sh
+User=ttrentler
+WorkingDirectory=/home/ttrentler/Desktop/code/blinkysign
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+3. **Enable and start the service**:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable blinkysign.service
+sudo systemctl start blinkysign.service
+```
+
+4. **Check the status**:
+
+```bash
+sudo systemctl status blinkysign.service
+```
+
+After rebooting, your BlinkySign will automatically start both the Flask app and the HTTP server for the control panel. You can access the control panel by navigating to `http://[raspberry-pi-ip]:8000/control_panel.html` from any device on your network.
+
 ## Cleaning Up AWS Resources
 
 When you're done with the project or want to remove all AWS resources created by it, you can use the cleanup script:
