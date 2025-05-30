@@ -74,10 +74,13 @@ def create_iot_thing():
         except iot_client.exceptions.ResourceAlreadyExistsException:
             logger.info(f"Policy {policy_name} already exists")
             # Add tags to existing policy
-            iot_client.tag_resource(
-                resourceArn=f"arn:aws:iot:{AWS_REGION}:*:policy/{policy_name}",
-                tags=[PROJECT_TAG]
-            )
+            try:
+                iot_client.tag_resource(
+                    resourceArn=f"arn:aws:iot:{AWS_REGION}:{get_account_id()}:policy/{policy_name}",
+                    tags=[PROJECT_TAG]
+                )
+            except Exception as e:
+                logger.warning(f"Could not tag existing policy: {e}")
         
         # Create keys and certificate
         cert_response = iot_client.create_keys_and_certificate(setAsActive=True)
@@ -88,11 +91,8 @@ def create_iot_thing():
         
         logger.info(f"Created certificate: {cert_id}")
         
-        # Add tags to certificate
-        iot_client.tag_resource(
-            resourceArn=cert_arn,
-            tags=[PROJECT_TAG]
-        )
+        # Skip tagging certificates as it's not supported directly
+        # IoT certificates can't be tagged with the TagResource API
         
         # Attach policy to certificate
         iot_client.attach_policy(
@@ -119,6 +119,9 @@ def create_iot_thing():
         endpoint = iot_client.describe_endpoint(endpointType='iot:Data-ATS')
         with open('certs/endpoint.txt', 'w') as f:
             f.write(endpoint['endpointAddress'])
+            
+        # Update .env file with IoT endpoint
+        update_env_file('IOT_ENDPOINT', endpoint['endpointAddress'])
             
         logger.info(f"Saved certificates and endpoint to 'certs/' directory")
         logger.info(f"IoT Endpoint: {endpoint['endpointAddress']}")
@@ -254,12 +257,15 @@ def create_api_gateway():
         )
         
         # Add tags to stage
-        api_client.tag_resource(
-            resourceArn=f"arn:aws:apigateway:{AWS_REGION}::/restapis/{api_id}/stages/prod",
-            tags={
-                'project': 'blinkysign'
-            }
-        )
+        try:
+            api_client.tag_resource(
+                resourceArn=f"arn:aws:apigateway:{AWS_REGION}::/restapis/{api_id}/stages/prod",
+                tags={
+                    'project': 'blinkysign'
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Could not tag API Gateway stage: {e}")
         
         # Construct API endpoint
         api_endpoint = f"https://{api_id}.execute-api.{AWS_REGION}.amazonaws.com/prod"
@@ -305,6 +311,15 @@ def update_env_file(key, value):
             
     except Exception as e:
         logger.error(f"Error updating .env file: {e}")
+
+def get_account_id():
+    """Get the AWS account ID"""
+    try:
+        sts_client = boto3.client('sts')
+        return sts_client.get_caller_identity()['Account']
+    except Exception as e:
+        logger.error(f"Error getting AWS account ID: {e}")
+        return "*"  # Fallback to wildcard
 
 if __name__ == "__main__":
     logger.info("Setting up AWS resources for BlinkySign...")
