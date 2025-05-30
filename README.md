@@ -323,6 +323,8 @@ python boardtest.py
 
 To configure BlinkySign to automatically start on boot:
 
+### Local-Only Installation
+
 1. **Create a startup script**:
 
 ```bash
@@ -374,13 +376,69 @@ sudo systemctl enable blinkysign.service
 sudo systemctl start blinkysign.service
 ```
 
-4. **Check the status**:
+### AWS + Local Installation
+
+If you've chosen the AWS + Local installation option, you'll also want to start the IoT client on boot:
+
+1. **Create an IoT client startup script**:
+
+```bash
+sudo nano /home/ttrentler/Desktop/code/blinkysign/iot_startup.sh
+```
+
+Add this content:
+```bash
+#!/bin/bash
+cd /home/ttrentler/Desktop/code/blinkysign
+source venv/bin/activate
+python iot_client.py
+```
+
+Make it executable:
+```bash
+chmod +x /home/ttrentler/Desktop/code/blinkysign/iot_startup.sh
+```
+
+2. **Create a systemd service file for the IoT client**:
+
+```bash
+sudo nano /etc/systemd/system/blinkysign-iot.service
+```
+
+Add this content:
+```
+[Unit]
+Description=BlinkySign IoT Client Service
+After=network.target
+Wants=blinkysign.service
+
+[Service]
+ExecStart=/home/ttrentler/Desktop/code/blinkysign/iot_startup.sh
+User=ttrentler
+WorkingDirectory=/home/ttrentler/Desktop/code/blinkysign
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+3. **Enable and start the IoT service**:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable blinkysign-iot.service
+sudo systemctl start blinkysign-iot.service
+```
+
+4. **Check the status of both services**:
 
 ```bash
 sudo systemctl status blinkysign.service
+sudo systemctl status blinkysign-iot.service
 ```
 
-After rebooting, your BlinkySign will automatically start both the Flask app and the HTTP server for the control panel. You can access the control panel by navigating to `http://[raspberry-pi-ip]:8000/control_panel.html` from any device on your network.
+After rebooting, your BlinkySign will automatically start the Flask app, HTTP server, and IoT client (if enabled). You can access the control panel by navigating to `http://[raspberry-pi-ip]:8000/control_panel.html` from any device on your network.
 
 ## Cleaning Up AWS Resources
 
