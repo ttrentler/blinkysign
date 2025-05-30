@@ -23,6 +23,9 @@ logger = logging.getLogger(__name__)
 AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 THING_NAME = os.getenv('IOT_THING_NAME', 'blinkysign')
 
+# Project tag
+PROJECT_TAG = {"Key": "project", "Value": "blinkysign"}
+
 def create_iot_thing():
     """Create an AWS IoT Thing for the BlinkySign"""
     try:
@@ -31,7 +34,11 @@ def create_iot_thing():
         # Create IoT Thing
         thing_response = iot_client.create_thing(
             thingName=THING_NAME,
-            thingTypeName='LED_SIGN'
+            attributePayload={
+                'attributes': {
+                    'project': 'blinkysign'
+                }
+            }
         )
         logger.info(f"Created IoT Thing: {thing_response['thingName']}")
         
@@ -60,11 +67,17 @@ def create_iot_thing():
         try:
             policy_response = iot_client.create_policy(
                 policyName=policy_name,
-                policyDocument=json.dumps(policy_document)
+                policyDocument=json.dumps(policy_document),
+                tags=[PROJECT_TAG]
             )
             logger.info(f"Created IoT Policy: {policy_response['policyName']}")
         except iot_client.exceptions.ResourceAlreadyExistsException:
             logger.info(f"Policy {policy_name} already exists")
+            # Add tags to existing policy
+            iot_client.tag_resource(
+                resourceArn=f"arn:aws:iot:{AWS_REGION}:*:policy/{policy_name}",
+                tags=[PROJECT_TAG]
+            )
         
         # Create keys and certificate
         cert_response = iot_client.create_keys_and_certificate(setAsActive=True)
@@ -74,6 +87,12 @@ def create_iot_thing():
         private_key = cert_response['keyPair']['PrivateKey']
         
         logger.info(f"Created certificate: {cert_id}")
+        
+        # Add tags to certificate
+        iot_client.tag_resource(
+            resourceArn=cert_arn,
+            tags=[PROJECT_TAG]
+        )
         
         # Attach policy to certificate
         iot_client.attach_policy(
@@ -125,6 +144,9 @@ def create_api_gateway():
             description='API for controlling BlinkySign',
             endpointConfiguration={
                 'types': ['REGIONAL']
+            },
+            tags={
+                'project': 'blinkysign'
             }
         )
         api_id = api_response['id']
@@ -150,6 +172,39 @@ def create_api_gateway():
             authorizationType='NONE'
         )
         
+        # Create mock integration for GET
+        api_client.put_integration(
+            restApiId=api_id,
+            resourceId=resource_id,
+            httpMethod='GET',
+            type='MOCK',
+            requestTemplates={
+                'application/json': '{"statusCode": 200}'
+            }
+        )
+        
+        # Create integration response for GET
+        api_client.put_integration_response(
+            restApiId=api_id,
+            resourceId=resource_id,
+            httpMethod='GET',
+            statusCode='200',
+            responseTemplates={
+                'application/json': '{"status": "off"}'
+            }
+        )
+        
+        # Create method response for GET
+        api_client.put_method_response(
+            restApiId=api_id,
+            resourceId=resource_id,
+            httpMethod='GET',
+            statusCode='200',
+            responseModels={
+                'application/json': 'Empty'
+            }
+        )
+        
         # Create PUT method
         api_client.put_method(
             restApiId=api_id,
@@ -158,16 +213,98 @@ def create_api_gateway():
             authorizationType='NONE'
         )
         
+        # Create mock integration for PUT
+        api_client.put_integration(
+            restApiId=api_id,
+            resourceId=resource_id,
+            httpMethod='PUT',
+            type='MOCK',
+            requestTemplates={
+                'application/json': '{"statusCode": 200}'
+            }
+        )
+        
+        # Create integration response for PUT
+        api_client.put_integration_response(
+            restApiId=api_id,
+            resourceId=resource_id,
+            httpMethod='PUT',
+            statusCode='200',
+            responseTemplates={
+                'application/json': '{"status": "updated"}'
+            }
+        )
+        
+        # Create method response for PUT
+        api_client.put_method_response(
+            restApiId=api_id,
+            resourceId=resource_id,
+            httpMethod='PUT',
+            statusCode='200',
+            responseModels={
+                'application/json': 'Empty'
+            }
+        )
+        
+        # Create deployment
+        deployment = api_client.create_deployment(
+            restApiId=api_id,
+            stageName='prod',
+            description='Production deployment'
+        )
+        
+        # Add tags to stage
+        api_client.tag_resource(
+            resourceArn=f"arn:aws:apigateway:{AWS_REGION}::/restapis/{api_id}/stages/prod",
+            tags={
+                'project': 'blinkysign'
+            }
+        )
+        
+        # Construct API endpoint
+        api_endpoint = f"https://{api_id}.execute-api.{AWS_REGION}.amazonaws.com/prod"
+        
+        # Update .env file with API endpoint
+        update_env_file('API_ENDPOINT', api_endpoint)
+        
         logger.info(f"Created API Gateway methods for /status resource")
+        logger.info(f"API Gateway endpoint: {api_endpoint}")
         
         return {
             'apiId': api_id,
-            'endpoint': f"https://{api_id}.execute-api.{AWS_REGION}.amazonaws.com/prod"
+            'endpoint': api_endpoint
         }
         
     except Exception as e:
         logger.error(f"Error creating API Gateway: {e}")
         raise
+
+def update_env_file(key, value):
+    """Update a key in the .env file"""
+    try:
+        # Read the current .env file
+        with open('.env', 'r') as f:
+            lines = f.readlines()
+        
+        # Update the key with the new value
+        updated = False
+        for i, line in enumerate(lines):
+            if line.startswith(f"{key}="):
+                lines[i] = f"{key}={value}\n"
+                updated = True
+                break
+        
+        # Write the updated content back to the file
+        with open('.env', 'w') as f:
+            f.writelines(lines)
+            
+        if updated:
+            logger.info(f"Updated {key} in .env file")
+        else:
+            logger.warning(f"Could not find {key} in .env file")
+            
+    except Exception as e:
+        logger.error(f"Error updating .env file: {e}")
 
 if __name__ == "__main__":
     logger.info("Setting up AWS resources for BlinkySign...")
