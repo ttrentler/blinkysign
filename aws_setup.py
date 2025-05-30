@@ -668,6 +668,18 @@ def enable_cors_for_resource(api_client, api_id, resource_id):
 def update_env_file(key, value):
     """Update a key in the .env file"""
     try:
+        # Create .env file from example if it doesn't exist
+        if not os.path.exists('.env') and os.path.exists('.env.example'):
+            with open('.env.example', 'r') as src, open('.env', 'w') as dest:
+                dest.write(src.read())
+            logger.info("Created .env file from .env.example")
+        elif not os.path.exists('.env'):
+            # Create a new .env file with minimal content
+            with open('.env', 'w') as f:
+                f.write(f"{key}={value}\n")
+            logger.info(f"Created new .env file with {key}={value}")
+            return
+            
         # Read the current .env file
         with open('.env', 'r') as f:
             lines = f.readlines()
@@ -680,14 +692,15 @@ def update_env_file(key, value):
                 updated = True
                 break
         
+        # Add the key if it doesn't exist
+        if not updated:
+            lines.append(f"{key}={value}\n")
+            
         # Write the updated content back to the file
         with open('.env', 'w') as f:
             f.writelines(lines)
             
-        if updated:
-            logger.info(f"Updated {key} in .env file")
-        else:
-            logger.warning(f"Could not find {key} in .env file")
+        logger.info(f"Updated {key} in .env file")
             
     except Exception as e:
         logger.error(f"Error updating .env file: {e}")
