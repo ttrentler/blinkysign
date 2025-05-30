@@ -194,8 +194,8 @@
     <script>
         // API endpoints
         const endpoints = {
-            local: 'http://localhost:5000',
-            aws: 'https://oincb2egpf.execute-api.us-east-1.amazonaws.com/prod',
+            local: window.location.hostname === 'localhost' ? 'http://localhost:5000' : `http://${window.location.hostname}:5000`,
+            aws: 'https://bbs8rrry02.execute-api.us-east-1.amazonaws.com/prod',
             custom: ''
         };
         
