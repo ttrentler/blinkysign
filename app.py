@@ -7,6 +7,7 @@ import time
 import json
 import logging
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from dotenv import load_dotenv
 from led_controller import led_controller
 
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Current state
 current_state = {
