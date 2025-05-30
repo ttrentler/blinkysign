@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- API Key: LjEU9KqGnI6Ap50eSATjl68vmv8XALfG1DMIX4jK -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlinkySign Control Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .control-panel {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button-group {
+            margin-bottom: 20px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #555;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.red { background-color: #f44336; }
+        button.red:hover { background-color: #d32f2f; }
+        button.blue { background-color: #2196F3; }
+        button.blue:hover { background-color: #1976D2; }
+        button.yellow { background-color: #FFC107; }
+        button.yellow:hover { background-color: #FFA000; }
+        button.purple { background-color: #9C27B0; }
+        button.purple:hover { background-color: #7B1FA2; }
+        button.cyan { background-color: #00BCD4; }
+        button.cyan:hover { background-color: #0097A7; }
+        button.white { 
+            background-color: #FFFFFF; 
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        button.white:hover { background-color: #F5F5F5; }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #e8f5e9;
+        }
+        #statusText {
+            font-weight: bold;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            width: 100%;
+            max-width: 300px;
+        }
+        input[type="number"], input[type="text"] {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            width: 100%;
+            max-width: 300px;
+        }
+        .endpoint-selector {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .api-key-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>BlinkySign Control Panel</h1>
+    
+    <div class="endpoint-selector">
+        <h2>API Configuration</h2>
+        <div class="form-group">
+            <label for="apiEndpoint">Select API Endpoint:</label>
+            <select id="apiEndpoint" onchange="updateApiEndpoint()">
+                <option value="local">Local (http://localhost:5000)</option>
+                <option value="aws">AWS (https://oflvexv60m.execute-api.us-east-1.amazonaws.com/prod)</option>
+                <option value="custom">Custom</option>
+            </select>
+        </div>
+        <div id="customEndpointGroup" style="display: none;">
+            <div class="form-group">
+                <label for="customEndpoint">Custom Endpoint URL:</label>
+                <input type="text" id="customEndpoint" style="width: 100%; max-width: 500px;" 
+                       placeholder="https://your-api-endpoint.com">
+                <button onclick="setCustomEndpoint()">Set Endpoint</button>
+            </div>
+        </div>
+        <p>Current endpoint: <span id="currentEndpoint">http://localhost:5000</span></p>
+        
+        <div class="api-key-section">
+            <div class="form-group">
+                <label for="apiKey">API Key (required for AWS endpoint):</label>
+                <input type="text" id="apiKey" placeholder="Enter your API key">
+            </div>
+        </div>
+    </div>
+    
+    <div class="control-panel">
+        <div class="button-group">
+            <h2>Status Controls</h2>
+            <button onclick="getStatus()">Get Status</button>
+            <button onclick="toggleMute()">Toggle Mute</button>
+            <button class="red" onclick="setMuted(true)">Set Muted (Red)</button>
+            <button class="blue" onclick="setMuted(false)">Set Unmuted (Green)</button>
+            <button onclick="turnOff()">Turn Off LEDs</button>
+        </div>
+        
+        <div class="button-group">
+            <h2>Effects</h2>
+            <button onclick="triggerRainbow()">Rainbow Effect</button>
+            
+            <div class="form-group">
+                <label for="pulseColor">Pulse Color:</label>
+                <select id="pulseColor">
+                    <option value="red">Red</option>
+                    <option value="green">Green</option>
+                    <option value="blue" selected>Blue</option>
+                    <option value="yellow">Yellow</option>
+                    <option value="purple">Purple</option>
+                    <option value="cyan">Cyan</option>
+                    <option value="white">White</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="pulseCycles">Pulse Cycles:</label>
+                <input type="number" id="pulseCycles" min="1" max="10" value="3">
+            </div>
+            
+            <button onclick="triggerPulse()">Pulse Effect</button>
+        </div>
+        
+        <div class="button-group">
+            <h2>Quick Color Pulses</h2>
+            <button class="red" onclick="quickPulse('red')">Red Pulse</button>
+            <button class="blue" onclick="quickPulse('blue')">Blue Pulse</button>
+            <button class="yellow" onclick="quickPulse('yellow')">Yellow Pulse</button>
+            <button class="purple" onclick="quickPulse('purple')">Purple Pulse</button>
+            <button class="cyan" onclick="quickPulse('cyan')">Cyan Pulse</button>
+            <button class="white" onclick="quickPulse('white')">White Pulse</button>
+        </div>
+        
+        <div class="status">
+            <p>Status: <span id="statusText">Unknown</span></p>
+            <p>Last Response: <span id="responseText">None</span></p>
+        </div>
+    </div>
+
+    <script>
+        // API endpoints
+        const endpoints = {
+            local: 'http://localhost:5000',
+            aws: 'https://oincb2egpf.execute-api.us-east-1.amazonaws.com/prod',
+            custom: ''
+        };
+        
+        // Current API endpoint
+        let currentEndpoint = endpoints.local;
+        
+        // Update the displayed current endpoint
+        function displayCurrentEndpoint() {
+            document.getElementById('currentEndpoint').textContent = currentEndpoint;
+        }
+        
+        // Update API endpoint based on selection
+        function updateApiEndpoint() {
+            const selection = document.getElementById('apiEndpoint').value;
+            
+            if (selection === 'custom') {
+                document.getElementById('customEndpointGroup').style.display = 'block';
+            } else {
+                document.getElementById('customEndpointGroup').style.display = 'none';
+                currentEndpoint = endpoints[selection];
+                displayCurrentEndpoint();
+            }
+        }
+        
+        // Set custom endpoint
+        function setCustomEndpoint() {
+            const customUrl = document.getElementById('customEndpoint').value.trim();
+            if (customUrl) {
+                endpoints.custom = customUrl;
+                currentEndpoint = customUrl;
+                displayCurrentEndpoint();
+            }
+        }
+        
+        // Update status display
+        function updateStatus(message, response) {
+            document.getElementById('statusText').textContent = message;
+            document.getElementById('responseText').textContent = JSON.stringify(response);
+        }
+        
+        // Get API key if needed
+        function getHeaders() {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (apiKey) {
+                headers['x-api-key'] = apiKey;
+            }
+            
+            return headers;
+        }
+        
+        // Generic function to make API calls
+        async function callApi(endpoint, method, body = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: getHeaders()
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(`${currentEndpoint}${endpoint}`, options);
+                const data = await response.json();
+                
+                updateStatus('Success', data);
+                return data;
+            } catch (error) {
+                updateStatus(`Error: ${error.message}`, {});
+                console.error('API call failed:', error);
+            }
+        }
+        
+        // API functions
+        async function getStatus() {
+            const data = await callApi('/status', 'GET');
+            if (data) {
+                const status = data.muted ? 'Muted (Red)' : 'Unmuted (Green)';
+                updateStatus(status, data);
+            }
+        }
+        
+        async function toggleMute() {
+            await callApi('/toggle', 'PUT');
+        }
+        
+        async function setMuted(muted) {
+            await callApi('/set', 'PUT', { muted: muted });
+        }
+        
+        async function turnOff() {
+            await callApi('/off', 'PUT');
+        }
+        
+        async function triggerRainbow() {
+            await callApi('/effects/rainbow', 'PUT');
+        }
+        
+        async function triggerPulse() {
+            const color = document.getElementById('pulseColor').value;
+            const cycles = parseInt(document.getElementById('pulseCycles').value);
+            
+            await callApi('/effects/pulse', 'PUT', {
+                color: color,
+                cycles: cycles
+            });
+        }
+        
+        async function quickPulse(color) {
+            await callApi('/effects/pulse', 'PUT', {
+                color: color,
+                cycles: 3
+            });
+        }
+        
+        // Check health on load
+        window.onload = async function() {
+            displayCurrentEndpoint();
+            
+            try {
+                const headers = getHeaders();
+                const response = await fetch(`${currentEndpoint}/health`, {
+                    headers: headers
+                });
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    updateStatus('Connected', data);
+                } else {
+                    updateStatus('API is not healthy', data);
+                }
+            } catch (error) {
+                updateStatus(`Cannot connect to API: ${error.message}`, {});
+            }
+        };
+    </script>
+</body>
+</html>

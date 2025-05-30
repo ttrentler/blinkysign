@@ -11,6 +11,9 @@ import time
 import re
 from dotenv import load_dotenv
 
+# Force boto3 to use the shared credentials file
+os.environ['AWS_SDK_LOAD_CONFIG'] = '1'
+
 # Load environment variables
 load_dotenv()
 
