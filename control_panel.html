@@ -158,7 +158,7 @@
             
             <div class="form-group">
                 <label for="pulseColor">Pulse Color:</label>
-                <select id="pulseColor">
+                <select id="pulseColor" class="effectColor">
                     <option value="red">Red</option>
                     <option value="green">Green</option>
                     <option value="blue" selected>Blue</option>
@@ -175,6 +175,45 @@
             </div>
             
             <button onclick="triggerPulse()">Pulse Effect</button>
+            
+            <hr style="margin: 20px 0; border-top: 1px dashed #ddd;">
+            
+            <div class="form-group">
+                <label for="theaterColor">Theater Chase Color:</label>
+                <select id="theaterColor" class="effectColor">
+                    <option value="red">Red</option>
+                    <option value="green">Green</option>
+                    <option value="blue">Blue</option>
+                    <option value="yellow">Yellow</option>
+                    <option value="purple">Purple</option>
+                    <option value="cyan">Cyan</option>
+                    <option value="white" selected>White</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="theaterIterations">Theater Iterations:</label>
+                <input type="number" id="theaterIterations" min="1" max="20" value="10">
+            </div>
+            
+            <button onclick="triggerTheater()">Theater Chase Effect</button>
+            
+            <hr style="margin: 20px 0; border-top: 1px dashed #ddd;">
+            
+            <div class="form-group">
+                <label for="wipeColor">Color Wipe:</label>
+                <select id="wipeColor" class="effectColor">
+                    <option value="red">Red</option>
+                    <option value="green">Green</option>
+                    <option value="blue" selected>Blue</option>
+                    <option value="yellow">Yellow</option>
+                    <option value="purple">Purple</option>
+                    <option value="cyan">Cyan</option>
+                    <option value="white">White</option>
+                </select>
+            </div>
+            
+            <button onclick="triggerWipe()">Color Wipe Effect</button>
         </div>
         
         <div class="button-group">
@@ -314,6 +353,24 @@
             await callApi('/effects/pulse', 'PUT', {
                 color: color,
                 cycles: 3
+            });
+        }
+        
+        async function triggerTheater() {
+            const color = document.getElementById('theaterColor').value;
+            const iterations = parseInt(document.getElementById('theaterIterations').value);
+            
+            await callApi('/effects/theater', 'PUT', {
+                color: color,
+                iterations: iterations
+            });
+        }
+        
+        async function triggerWipe() {
+            const color = document.getElementById('wipeColor').value;
+            
+            await callApi('/effects/wipe', 'PUT', {
+                color: color
             });
         }
         

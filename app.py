@@ -132,6 +132,75 @@ def pulse_effect():
             "message": str(e)
         }), 500
 
+@app.route('/effects/theater', methods=['PUT'])
+def theater_effect():
+    """Trigger theater chase effect"""
+    try:
+        data = request.get_json() or {}
+        color = data.get("color", "white").lower()
+        iterations = int(data.get("iterations", 10))
+        
+        # Map color names to RGB values
+        color_map = {
+            "red": (255, 0, 0),
+            "green": (0, 255, 0),
+            "blue": (0, 0, 255),
+            "yellow": (255, 255, 0),
+            "purple": (128, 0, 128),
+            "cyan": (0, 255, 255),
+            "white": (255, 255, 255)
+        }
+        
+        rgb_color = color_map.get(color, (255, 255, 255))  # Default to white
+        
+        led_controller.theater_chase(rgb_color, iterations=iterations)
+        update_led_state()  # Return to normal state after effect
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Theater chase effect completed with color {color}"
+        })
+    except Exception as e:
+        logger.error(f"Error in theater chase effect: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route('/effects/wipe', methods=['PUT'])
+def wipe_effect():
+    """Trigger color wipe effect"""
+    try:
+        data = request.get_json() or {}
+        color = data.get("color", "blue").lower()
+        
+        # Map color names to RGB values
+        color_map = {
+            "red": (255, 0, 0),
+            "green": (0, 255, 0),
+            "blue": (0, 0, 255),
+            "yellow": (255, 255, 0),
+            "purple": (128, 0, 128),
+            "cyan": (0, 255, 255),
+            "white": (255, 255, 255)
+        }
+        
+        rgb_color = color_map.get(color, (0, 0, 255))  # Default to blue
+        
+        led_controller.color_wipe(rgb_color)
+        update_led_state()  # Return to normal state after effect
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Color wipe effect completed with color {color}"
+        })
+    except Exception as e:
+        logger.error(f"Error in color wipe effect: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
 @app.route('/off', methods=['PUT'])
 def turn_off():
     """Turn off all LEDs"""

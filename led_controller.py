@@ -132,6 +132,33 @@ class LEDController:
                 strip.show()
             time.sleep(wait)
     
+    def theater_chase(self, color, wait=0.05, iterations=10):
+        """Movie theater light style chaser animation."""
+        for j in range(iterations):
+            for q in range(3):
+                for i in range(0, LED_COUNT, 3):
+                    if i + q < LED_COUNT:
+                        for strip in self.strips:
+                            strip[i + q] = color
+                
+                for strip in self.strips:
+                    strip.show()
+                    
+                time.sleep(wait)
+                
+                for i in range(0, LED_COUNT, 3):
+                    if i + q < LED_COUNT:
+                        for strip in self.strips:
+                            strip[i + q] = OFF
+    
+    def color_wipe(self, color, wait=0.05):
+        """Fill the dots one after the other with a color."""
+        for i in range(LED_COUNT):
+            for strip in self.strips:
+                strip[i] = color
+                strip.show()
+            time.sleep(wait)
+    
     def pulse(self, color, cycles=3, duration=1.0):
         """Pulse effect on all strips"""
         steps = 50
