@@ -1,26 +1,48 @@
-# Security Policy
+# 🔒 Security Policy
 
-Be Very Careful When Setting Up AWS Connectivity
-The current version of blinkysign requires AWS credentials to deploy the project using local scripts. As such, we urge all users to follow strict security practices when working with AWS credentials during setup and deployment.
+## Be Very Careful When Setting Up AWS Connectivity
 
-⚠️ Important Warnings:
+The current version of `blinkysign` requires AWS credentials to deploy the project using local scripts. This gives deployment scripts access to your AWS account, so it's critical to follow safe handling practices.
 
-Never commit credentials to source control.
-Double-check that your .env file and any AWS credential files are listed in your .gitignore.
-Local AWS credentials are required for deployment scripts.
-These credentials are used to configure and deploy infrastructure. They grant significant permissions and must be protected accordingly.
-Manually clean up after deployment:
-Immediately remove any AWS access keys or tokens from your .env file once the deployment has succeeded.
-Delete any temporary AWS access tokens or keys from your AWS account that were used in the process. Leaving unused credentials active exposes your account to unnecessary risk.
-Use the principle of least privilege.
-If you must generate credentials for deployment, restrict permissions only to the specific services and actions required for the setup.
+---
 
+### ⚠️ Important Security Guidelines
 
-## Supported Versions
+- **NEVER commit your credentials** (`.env` file, AWS config files, etc.) to version control.  
+  Ensure your `.env` file is included in `.gitignore`.
 
-TBD
+- **Local AWS credentials are required** only during the initial deployment process.
 
-## Reporting a Vulnerability
+- After a successful deployment:
+  - **Remove** any credentials from the `.env` file.
+  - **Delete** access tokens or keys from your AWS account to reduce attack surface.
 
-Report a vulnarabil;ity here!!
+- **Use least-privilege access.**  
+  Generate access keys with only the permissions necessary for deployment (e.g., Lambda, API Gateway).
+
+- **Rotate keys regularly.**  
+  If credentials are exposed or compromised, rotate them immediately.
+
+- **Audit your AWS usage.**  
+  Use AWS IAM logs and CloudTrail to monitor any unauthorized or unexpected activity.
+
+---
+
+## 🔐 Best Practices
+
+- Use tools like [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/) for managing secrets securely.
+- Avoid long-lived access keys; prefer short-term credentials or IAM roles when possible.
+- Consider setting up a secure CI/CD pipeline to handle deployments without needing to store local credentials.
+
+---
+
+## 🆘 Need Help?
+
+If you have any concerns or questions about the security of your deployment, please:
+
+- Open an issue in this repository
+- Refer to [AWS IAM Best Practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)
+- Contact the repository maintainer
+
+Stay safe and secure while using `blinkysign`! 🚦
 
