@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BlinkySign Toggle</title>
+    <script>
+        window.onload = function() {
+            fetch('http://raspberrypi.local:5000/toggle', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerText = 'Toggled: ' + JSON.stringify(data);
+                // Auto close after 1 second
+                setTimeout(() => window.close(), 1000);
+            })
+            .catch(error => {
+                document.getElementById('result').innerText = 'Error: ' + error;
+            });
+        };
+    </script>
+</head>
+<body>
+    <div id="result">Toggling...</div>
+</body>
+</html>

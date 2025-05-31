@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BlinkySign AWS Mute</title>
+    <script>
+        window.onload = function() {
+            // Replace with your actual API Gateway URL and API key
+            fetch('https://your-api-gateway-url/set', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': 'your-api-key-here'
+                },
+                body: JSON.stringify({ muted: true })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerText = 'Muted: ' + JSON.stringify(data);
+                // Auto close after 1 second
+                setTimeout(() => window.close(), 1000);
+            })
+            .catch(error => {
+                document.getElementById('result').innerText = 'Error: ' + error;
+            });
+        };
+    </script>
+</head>
+<body>
+    <div id="result">Muting via AWS...</div>
+</body>
+</html>

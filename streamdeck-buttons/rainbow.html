@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BlinkySign Rainbow Effect</title>
+    <script>
+        window.onload = function() {
+            fetch('http://raspberrypi.local:5000/effects/rainbow', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerText = 'Rainbow: ' + JSON.stringify(data);
+                // Auto close after 1 second
+                setTimeout(() => window.close(), 1000);
+            })
+            .catch(error => {
+                document.getElementById('result').innerText = 'Error: ' + error;
+            });
+        };
+    </script>
+</head>
+<body>
+    <div id="result">Triggering rainbow effect...</div>
+</body>
+</html>

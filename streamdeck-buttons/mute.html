@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BlinkySign Mute</title>
+    <script>
+        window.onload = function() {
+            fetch('http://raspberrypi.local:5000/set', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ muted: true })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerText = 'Muted: ' + JSON.stringify(data);
+                // Auto close after 1 second
+                setTimeout(() => window.close(), 1000);
+            })
+            .catch(error => {
+                document.getElementById('result').innerText = 'Error: ' + error;
+            });
+        };
+    </script>
+</head>
+<body>
+    <div id="result">Muting...</div>
+</body>
+</html>
