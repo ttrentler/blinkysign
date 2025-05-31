@@ -328,13 +328,15 @@ To configure BlinkySign to automatically start on boot:
 1. **Create a startup script**:
 
 ```bash
-sudo nano /home/ttrentler/Desktop/code/blinkysign/startup.sh
+sudo nano /path/to/blinkysign/startup.sh
 ```
 
 Add this content:
 ```bash
 #!/bin/bash
-cd /home/ttrentler/Desktop/code/blinkysign
+# Get the directory where the script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+cd "$SCRIPT_DIR"
 source venv/bin/activate
 python app.py &
 python -m http.server 8000 &
@@ -342,7 +344,7 @@ python -m http.server 8000 &
 
 Make it executable:
 ```bash
-chmod +x /home/ttrentler/Desktop/code/blinkysign/startup.sh
+chmod +x /path/to/blinkysign/startup.sh
 ```
 
 2. **Create a systemd service file**:
@@ -358,9 +360,9 @@ Description=BlinkySign Service
 After=network.target
 
 [Service]
-ExecStart=/home/ttrentler/Desktop/code/blinkysign/startup.sh
-User=ttrentler
-WorkingDirectory=/home/ttrentler/Desktop/code/blinkysign
+ExecStart=/path/to/blinkysign/startup.sh
+User=your-username
+WorkingDirectory=/path/to/blinkysign
 Restart=always
 RestartSec=5
 
@@ -383,20 +385,22 @@ If you've chosen the AWS + Local installation option, you'll also want to start 
 1. **Create an IoT client startup script**:
 
 ```bash
-sudo nano /home/ttrentler/Desktop/code/blinkysign/iot_startup.sh
+sudo nano /path/to/blinkysign/iot_startup.sh
 ```
 
 Add this content:
 ```bash
 #!/bin/bash
-cd /home/ttrentler/Desktop/code/blinkysign
+# Get the directory where the script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+cd "$SCRIPT_DIR"
 source venv/bin/activate
 python iot_client.py
 ```
 
 Make it executable:
 ```bash
-chmod +x /home/ttrentler/Desktop/code/blinkysign/iot_startup.sh
+chmod +x /path/to/blinkysign/iot_startup.sh
 ```
 
 2. **Create a systemd service file for the IoT client**:
@@ -413,9 +417,9 @@ After=network.target
 Wants=blinkysign.service
 
 [Service]
-ExecStart=/home/ttrentler/Desktop/code/blinkysign/iot_startup.sh
-User=ttrentler
-WorkingDirectory=/home/ttrentler/Desktop/code/blinkysign
+ExecStart=/path/to/blinkysign/iot_startup.sh
+User=your-username
+WorkingDirectory=/path/to/blinkysign
 Restart=always
 RestartSec=10
 
@@ -437,6 +441,16 @@ sudo systemctl start blinkysign-iot.service
 sudo systemctl status blinkysign.service
 sudo systemctl status blinkysign-iot.service
 ```
+
+## Installation Path
+
+When following the instructions in this README, replace `/path/to/blinkysign` with your actual installation path. For example:
+- If you installed in your home directory: `/home/username/blinkysign`
+- If you installed on your desktop: `/home/username/Desktop/blinkysign`
+
+Also replace `your-username` with your actual system username.
+
+Make sure to use the correct path in all configuration files, especially in the systemd service files.
 
 After rebooting, your BlinkySign will automatically start the Flask app, HTTP server, and IoT client (if enabled). You can access the control panel by navigating to `http://[raspberry-pi-ip]:8000/control_panel.html` from any device on your network.
 
