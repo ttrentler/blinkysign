@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- API Key: LjEU9KqGnI6Ap50eSATjl68vmv8XALfG1DMIX4jK -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BlinkySign Control Panel</title>
@@ -121,7 +120,7 @@
             <label for="apiEndpoint">Select API Endpoint:</label>
             <select id="apiEndpoint" onchange="updateApiEndpoint()">
                 <option value="local">Local (http://localhost:5000)</option>
-                <option value="aws">AWS (https://oflvexv60m.execute-api.us-east-1.amazonaws.com/prod)</option>
+                <option value="aws">AWS (your API Gateway URL)</option>
                 <option value="custom">Custom</option>
             </select>
         </div>
@@ -198,7 +197,7 @@
         // API endpoints
         const endpoints = {
             local: window.location.hostname === 'localhost' ? 'http://localhost:5000' : `http://${window.location.hostname}:5000`,
-            aws: 'https://bbs8rrry02.execute-api.us-east-1.amazonaws.com/prod',
+            aws: 'https://your-api-gateway-url.execute-api.us-east-1.amazonaws.com/prod',
             custom: ''
         };
         
