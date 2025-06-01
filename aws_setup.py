@@ -648,7 +648,7 @@ def enable_cors_for_resource(api_client, api_id, resource_id):
             }
         )
         
-        # Add integration response for OPTIONS
+        # Add integration response for OPTIONS with enhanced CORS headers
         api_client.put_integration_response(
             restApiId=api_id,
             resourceId=resource_id,
@@ -663,6 +663,97 @@ def enable_cors_for_resource(api_client, api_id, resource_id):
                 'application/json': ''
             }
         )
+        
+        # Also add CORS headers to the actual methods (GET, PUT, etc.)
+        # This is crucial for the actual responses, not just the OPTIONS preflight
+        for method in ['GET', 'PUT']:
+            try:
+                # Check if the method exists for this resource
+                try:
+                    api_client.get_method(
+                        restApiId=api_id,
+                        resourceId=resource_id,
+                        httpMethod=method
+                    )
+                    
+                    # Update method response to include CORS headers
+                    try:
+                        api_client.update_method_response(
+                            restApiId=api_id,
+                            resourceId=resource_id,
+                            httpMethod=method,
+                            statusCode='200',
+                            patchOperations=[
+                                {
+                                    'op': 'add',
+                                    'path': '/responseParameters/method.response.header.Access-Control-Allow-Origin',
+                                    'value': 'true'
+                                }
+                            ]
+                        )
+                    except Exception:
+                        # If update fails, try to create it
+                        current_response = api_client.get_method_response(
+                            restApiId=api_id,
+                            resourceId=resource_id,
+                            httpMethod=method,
+                            statusCode='200'
+                        )
+                        
+                        response_params = current_response.get('responseParameters', {})
+                        response_params['method.response.header.Access-Control-Allow-Origin'] = True
+                        
+                        api_client.put_method_response(
+                            restApiId=api_id,
+                            resourceId=resource_id,
+                            httpMethod=method,
+                            statusCode='200',
+                            responseParameters=response_params,
+                            responseModels=current_response.get('responseModels', {'application/json': 'Empty'})
+                        )
+                    
+                    # Update integration response to include CORS headers
+                    try:
+                        api_client.update_integration_response(
+                            restApiId=api_id,
+                            resourceId=resource_id,
+                            httpMethod=method,
+                            statusCode='200',
+                            patchOperations=[
+                                {
+                                    'op': 'add',
+                                    'path': '/responseParameters/method.response.header.Access-Control-Allow-Origin',
+                                    'value': "'*'"
+                                }
+                            ]
+                        )
+                    except Exception:
+                        # If update fails, try to get current and recreate
+                        current_integration = api_client.get_integration_response(
+                            restApiId=api_id,
+                            resourceId=resource_id,
+                            httpMethod=method,
+                            statusCode='200'
+                        )
+                        
+                        response_params = current_integration.get('responseParameters', {})
+                        response_params['method.response.header.Access-Control-Allow-Origin'] = "'*'"
+                        
+                        api_client.put_integration_response(
+                            restApiId=api_id,
+                            resourceId=resource_id,
+                            httpMethod=method,
+                            statusCode='200',
+                            responseParameters=response_params,
+                            responseTemplates=current_integration.get('responseTemplates', {'application/json': ''})
+                        )
+                        
+                except Exception:
+                    # Method doesn't exist for this resource, skip it
+                    pass
+                    
+            except Exception as method_error:
+                logger.warning(f"Could not update CORS for {method} method on resource {resource_id}: {method_error}")
         
         logger.info(f"Enabled CORS for resource {resource_id}")
     except Exception as e:
@@ -722,21 +813,17 @@ def update_control_panel_html(api_endpoint, api_key):
         with open(control_panel_path, 'r') as f:
             html_content = f.read()
         
-        # Update the AWS endpoint
-        aws_endpoint_pattern = r"aws: '(https://[^']*)',"
-        new_aws_endpoint = f"aws: '{api_endpoint}',"
-        html_content = re.sub(aws_endpoint_pattern, new_aws_endpoint, html_content)
+        # Replace the API Gateway URL placeholder
+        html_content = html_content.replace('API_GATEWAY_URL_PLACEHOLDER', api_endpoint)
         
-        # Add a placeholder for the API key
-        api_key_placeholder = f"<!-- API Key: {api_key} -->"
-        if "<!-- API Key:" not in html_content:
-            html_content = html_content.replace("<head>", f"<head>\n    {api_key_placeholder}")
+        # Replace the API key placeholder
+        html_content = html_content.replace('API_KEY_PLACEHOLDER', api_key)
         
         # Write the updated content back to the file
         with open(control_panel_path, 'w') as f:
             f.write(html_content)
             
-        logger.info(f"Updated control panel HTML with new API endpoint")
+        logger.info(f"Updated control panel HTML with new API endpoint and API key")
         
     except Exception as e:
         logger.error(f"Error updating control panel HTML: {e}")

@@ -106,6 +106,13 @@
             padding-top: 15px;
             border-top: 1px solid #ddd;
         }
+        .cors-proxy-section {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #fff3cd;
+            border-radius: 4px;
+            border: 1px solid #ffeeba;
+        }
     </style>
 </head>
 <body>
@@ -120,7 +127,7 @@
             <label for="apiEndpoint">Select API Endpoint:</label>
             <select id="apiEndpoint" onchange="updateApiEndpoint()">
                 <option value="local">Local (http://localhost:5000)</option>
-                <option value="aws">AWS (your API Gateway URL)</option>
+                <option value="aws">AWS (API_GATEWAY_URL_PLACEHOLDER)</option>
                 <option value="custom">Custom</option>
             </select>
         </div>
@@ -137,7 +144,21 @@
         <div class="api-key-section">
             <div class="form-group">
                 <label for="apiKey">API Key (required for AWS endpoint):</label>
-                <input type="text" id="apiKey" placeholder="Enter your API key">
+                <input type="text" id="apiKey" placeholder="Enter your API key" value="API_KEY_PLACEHOLDER">
+            </div>
+        </div>
+        
+        <div class="cors-proxy-section">
+            <h3>CORS Proxy for AWS</h3>
+            <div class="form-group">
+                <label for="useProxy">
+                    <input type="checkbox" id="useProxy" checked> 
+                    Use CORS proxy for AWS requests (helps with CORS errors)
+                </label>
+                <p style="font-size: 0.9em; color: #856404;">
+                    If you're having trouble connecting to AWS API Gateway due to CORS errors, 
+                    this option will route requests through a public CORS proxy.
+                </p>
             </div>
         </div>
     </div>
@@ -236,9 +257,12 @@
         // API endpoints
         const endpoints = {
             local: window.location.hostname === 'localhost' ? 'http://localhost:5000' : `http://${window.location.hostname}:5000`,
-            aws: 'https://your-api-gateway-url.execute-api.us-east-1.amazonaws.com/prod',
+            aws: 'API_GATEWAY_URL_PLACEHOLDER',
             custom: ''
         };
+        
+        // CORS proxy URL
+        const corsProxyUrl = 'https://corsproxy.io/?';
         
         // Current API endpoint
         let currentEndpoint = endpoints.local;
@@ -291,6 +315,21 @@
             return headers;
         }
         
+        // Get the appropriate URL based on endpoint and proxy settings
+        function getApiUrl(endpoint) {
+            const useProxy = document.getElementById('useProxy').checked;
+            const isAws = currentEndpoint === endpoints.aws || 
+                         (currentEndpoint === endpoints.custom && 
+                          currentEndpoint.includes('execute-api.') && 
+                          currentEndpoint.includes('amazonaws.com'));
+            
+            if (useProxy && isAws) {
+                return corsProxyUrl + encodeURIComponent(currentEndpoint + endpoint);
+            } else {
+                return currentEndpoint + endpoint;
+            }
+        }
+        
         // Generic function to make API calls
         async function callApi(endpoint, method, body = null) {
             try {
@@ -303,7 +342,10 @@
                     options.body = JSON.stringify(body);
                 }
                 
-                const response = await fetch(`${currentEndpoint}${endpoint}`, options);
+                const url = getApiUrl(endpoint);
+                console.log(`Calling API: ${url}`);
+                
+                const response = await fetch(url, options);
                 const data = await response.json();
                 
                 updateStatus('Success', data);
@@ -376,11 +418,15 @@
         
         // Check health on load
         window.onload = async function() {
-            displayCurrentEndpoint();
+            // Set AWS as default endpoint
+            document.getElementById('apiEndpoint').value = 'aws';
+            updateApiEndpoint();
             
             try {
                 const headers = getHeaders();
-                const response = await fetch(`${currentEndpoint}/health`, {
+                const url = getApiUrl('/health');
+                
+                const response = await fetch(url, {
                     headers: headers
                 });
                 const data = await response.json();
