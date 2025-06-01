@@ -121,13 +121,37 @@ def effect_callback(client, userdata, message):
     except Exception as e:
         logger.error(f"Error processing effect: {e}")
 
+def download_root_ca():
+    """Download Amazon Root CA certificate if it doesn't exist"""
+    root_ca_path = "certs/AmazonRootCA1.pem"
+    
+    # Create certs directory if it doesn't exist
+    os.makedirs("certs", exist_ok=True)
+    
+    # Check if the certificate exists
+    if not os.path.exists(root_ca_path):
+        logger.info("Amazon Root CA certificate not found. Downloading...")
+        try:
+            import urllib.request
+            url = "https://www.amazontrust.com/repository/AmazonRootCA1.pem"
+            urllib.request.urlretrieve(url, root_ca_path)
+            logger.info(f"Downloaded Amazon Root CA certificate to {root_ca_path}")
+        except Exception as e:
+            logger.error(f"Failed to download Amazon Root CA certificate: {e}")
+            raise
+    
+    return root_ca_path
+
 def connect_to_iot():
     """Connect to AWS IoT Core"""
+    # Ensure we have the Amazon Root CA certificate
+    root_ca_path = download_root_ca()
+    
     # Initialize MQTT client
     mqtt_client = AWSIoTMQTTClient(THING_NAME)
     mqtt_client.configureEndpoint(IOT_ENDPOINT, 8883)
     mqtt_client.configureCredentials(
-        "certs/AmazonRootCA1.pem",
+        root_ca_path,
         "certs/private.key",
         "certs/certificate.pem"
     )
