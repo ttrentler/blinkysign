@@ -42,6 +42,7 @@ The project consists of the following key files:
 - **iot_client.py**: Connects to AWS IoT Core and subscribes to MQTT topics to receive commands
 - **led_controller.py**: Controls the WS2812B LED strips via SPI interface
 - **aws_setup.py**: Sets up all required AWS resources (IoT Thing, API Gateway, etc.)
+- **connect_api_to_iot.py**: Connects API Gateway to IoT Core for remote control
 - **cleanup_aws.py**: Removes all AWS resources created by the project
 - **button_client.py**: Simple client for sending commands to the sign from a remote device
 - **physical_button.py**: Controls the sign using a physical button connected to GPIO
@@ -180,19 +181,30 @@ For full installation with cloud connectivity:
    
    This will create all necessary AWS resources and update your `.env` file with the endpoints.
 
-5. **Start the local server**:
+5. **Connect API Gateway to IoT Core**:
+   ```bash
+   python connect_api_to_iot.py
+   ```
+   
+   This script performs the following tasks:
+   - Creates an IAM role for IoT to republish messages
+   - Attaches the necessary policy to the role
+   - Creates IoT topic rules to forward API requests to your device
+   - Updates the API Gateway integration to use AWS service instead of mock
+
+6. **Start the local server**:
    ```bash
    source venv/bin/activate
    python app.py
    ```
 
-6. **Connect to AWS IoT Core**:
+7. **Connect to AWS IoT Core**:
    ```bash
    source venv/bin/activate
    python iot_client.py
    ```
 
-7. **Access the control panel**:
+8. **Access the control panel**:
    ```bash
    source venv/bin/activate
    python -m http.server 8000
@@ -204,6 +216,18 @@ For full installation with cloud connectivity:
    ```
    
    You can switch between local and AWS endpoints in the control panel.
+   
+9. **Verify the connection**:
+   After running the script, test the connection by:
+   - Opening the control panel in your browser
+   - Selecting the AWS endpoint
+   - Clicking any control button (e.g., Toggle Mute)
+   - Checking that your Raspberry Pi's LEDs respond to the command
+
+   If the connection doesn't work:
+   - Make sure your `.env` file has the correct `API_ID` value (extracted from `API_ENDPOINT`)
+   - Ensure your IoT client is running on the Raspberry Pi
+   - Check AWS CloudWatch logs for any errors in the API Gateway or IoT Core
 
 ## LED Strip Connection
 
