@@ -26,6 +26,7 @@ BlinkySign is a Raspberry Pi-powered LED sign that uses WS2812B LED strips to in
 - 3D printed enclosure (see 3dprints folder)
 - Optional: Physical button for local control
 - Optional: Elgato Stream Deck for remote control
+- Optional: Raspberry Pi Breakout board - https://www.amazon.com/dp/B084C69VSQ
 
 ## Software Requirements
 
