@@ -26,8 +26,6 @@ BlinkySign is a Raspberry Pi-powered LED sign that uses WS2812B LED strips to in
 - 3D printed enclosure (see 3dprints folder)
 - Optional: Physical button for local control
 - Optional: Elgato Stream Deck for remote control
-- Optional: Raspberry Pi Breakout board - https://www.amazon.com/dp/B084C69VSQ
-Look at this site for an example of wiring - https://core-electronics.com.au/guides/fully-addressable-rgb-raspberry-pi/
 
 ## Software Requirements
 
@@ -176,23 +174,29 @@ For full installation with cloud connectivity:
    AWS_REGION=us-east-1
    ```
 
-4. **Set up AWS resources**:
+4. **Deploy AWS resources using CloudFormation**:
    ```bash
-   python aws_setup.py
+   python deploy_aws.py
    ```
    
-   This will create all necessary AWS resources and update your `.env` file with the endpoints.
+   This will:
+   - Create a CloudFormation stack with all necessary AWS resources
+   - Set up IoT Core Thing, certificates, and policies
+   - Create API Gateway with all required endpoints and CORS support
+   - Configure API key authentication
+   - Update your `.env` file with all endpoints and credentials
+   - Update the control panel HTML with the new endpoints
 
 5. **Connect API Gateway to IoT Core**:
    ```bash
    python connect_api_to_iot.py
    ```
    
-   This script performs the following tasks:
-   - Creates an IAM role for IoT to republish messages
-   - Attaches the necessary policy to the role
-   - Creates IoT topic rules to forward API requests to your device
-   - Updates the API Gateway integration to use AWS service instead of mock
+   This will:
+   - Create necessary IAM roles and policies
+   - Set up IoT Core topic rules
+   - Replace mock integrations with real IoT Core integrations
+   - Deploy the updated API Gateway configuration
 
 6. **Start the local server**:
    ```bash
@@ -325,9 +329,45 @@ To use the provided button client:
 The project uses the following AWS services:
 
 - **IoT Core**: For reliable MQTT communication
-- **API Gateway**: For HTTP API endpoints with API key authentication
-- **Lambda** (optional): For additional processing logic
-- **DynamoDB** (optional): For storing state history
+  - IoT Thing with certificates and policies
+  - MQTT topics for device communication
+  - IoT Core endpoint for secure connectivity
+
+- **API Gateway**: For HTTP API endpoints
+  - REST API with API key authentication
+  - CORS support for web clients
+  - Mock integrations for initial testing (replaced with real IoT Core integrations during deployment)
+  - Endpoints for status, toggle, effects, and health check
+
+The deployment process involves two steps:
+1. Initial setup with mock integrations for testing
+2. Connecting to IoT Core with real integrations
+
+All AWS resources are managed through CloudFormation for consistent and repeatable deployments. The CloudFormation template (`cloudformation.yaml`) defines:
+
+1. IoT Core resources:
+   - IoT Thing
+   - Thing policy
+   - Certificates and attachments
+
+2. API Gateway resources:
+   - REST API with regional endpoint
+   - API key and usage plan
+   - Resources and methods for all endpoints
+   - CORS configuration
+   - Initial mock integrations (replaced with real IoT Core integrations)
+
+3. Lambda function for certificate management:
+   - Creates and manages IoT certificates
+   - Saves certificates to local files
+   - Updates environment configuration
+
+To deploy or update the AWS infrastructure:
+```bash
+python deploy_aws.py
+```
+
+This script will create or update the CloudFormation stack and configure your local environment.
 
 ## Testing the LED Strips
 
@@ -482,18 +522,19 @@ After rebooting, your BlinkySign will automatically start the Flask app, HTTP se
 
 ## Cleaning Up AWS Resources
 
-When you're done with the project or want to remove all AWS resources created by it, you can use the cleanup script:
+When you're done with the project or want to remove all AWS resources created by it, you can delete the CloudFormation stack:
 
 ```bash
-python cleanup_aws.py
+aws cloudformation delete-stack --stack-name blinkysign-stack
 ```
 
-This script will:
-1. Delete the IoT Thing
-2. Detach and delete all policies
-3. Detach, deactivate, and delete all certificates
-4. Delete the API Gateway and API keys
-5. Find and remove all resources tagged with `project:blinkysign`
+This will automatically delete all AWS resources created by the stack, including:
+- IoT Thing, certificates, and policies
+- API Gateway, stages, and API keys
+- Lambda functions and IAM roles
+- Any other resources created by the CloudFormation template
+
+The stack deletion will be clean and complete, ensuring no orphaned resources are left behind.
 
 ## License
 
