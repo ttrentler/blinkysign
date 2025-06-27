@@ -1,6 +1,6 @@
 # BlinkySign
 
-A project for creating an internet-connected 3D printed sign controlled via Raspberry Pi.
+A project for creating an internet-connected On-AIR 3D printed sign controlled via Raspberry Pi.
 
 ## Description
 
