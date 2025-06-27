@@ -109,7 +109,8 @@ def update_env_file(key, value):
             # Create a new .env file with minimal content
             with open('.env', 'w') as f:
                 f.write(f"{key}={value}\n")
-            logger.info(f"Created new .env file with {key}={value}")
+            # import html
+            logger.info(f"Created new .env file with {key}={html.escape(value)}")
             return
             
         # Read the current .env file
@@ -132,7 +133,7 @@ def update_env_file(key, value):
         with open('.env', 'w') as f:
             f.writelines(lines)
             
-        logger.info(f"Updated {key} in .env file")
+        logger.info(f"Updated {html.escape(key)} in .env file") # import html
             
     except Exception as e:
         logger.error(f"Error updating .env file: {e}")

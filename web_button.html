@@ -19,7 +19,7 @@
             margin: 40px 0;
         }
         .toggle-button {
-            background-color: #4CAF50;
+            background-color: #f44336;  /* Red for unmuted */
             border: none;
             color: white;
             padding: 15px 32px;
@@ -36,17 +36,17 @@
             transition: all 0.3s;
         }
         .toggle-button:hover {
-            background-color: #45a049;
+            background-color: #d32f2f;
             transform: scale(1.05);
         }
         .toggle-button:active {
             transform: scale(0.95);
         }
         .toggle-button.muted {
-            background-color: #f44336;
+            background-color: #4CAF50;  /* Green for muted */
         }
         .toggle-button.muted:hover {
-            background-color: #d32f2f;
+            background-color: #45a049;
         }
         .status {
             margin-top: 20px;
@@ -61,10 +61,10 @@
             background-color: #ccc;
         }
         .status-indicator.on {
-            background-color: #f44336;
+            background-color: #4CAF50;  /* Green for muted */
         }
         .status-indicator.off {
-            background-color: #4CAF50;
+            background-color: #f44336;  /* Red for unmuted */
         }
         .effects-container {
             margin-top: 40px;

@@ -46,7 +46,8 @@ def status_callback(client, userdata, message):
     """Callback when status messages are received"""
     try:
         payload = json.loads(message.payload.decode('utf-8'))
-        logger.info(f"Received message: {payload}")
+        # Use repr() to safely represent the payload in the log
+        logger.info(f"Received message: {repr(payload)}")
         
         if "muted" in payload:
             current_state["muted"] = bool(payload["muted"])

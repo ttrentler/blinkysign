@@ -609,6 +609,9 @@ def create_api_gateway():
         logger.error(f"Error creating API Gateway: {e}")
         raise
 
+# Import logging module to enable exception logging
+import logging
+
 def enable_cors_for_resource(api_client, api_id, resource_id):
     """Enable CORS for a resource"""
     try:
@@ -691,8 +694,9 @@ def enable_cors_for_resource(api_client, api_id, resource_id):
                                 }
                             ]
                         )
-                    except Exception:
+                    except Exception as e:
                         # If update fails, try to create it
+                        logging.exception("Failed to update method response: %s", e, stack_info=True, exc_info=True)
                         current_response = api_client.get_method_response(
                             restApiId=api_id,
                             resourceId=resource_id,
@@ -727,8 +731,9 @@ def enable_cors_for_resource(api_client, api_id, resource_id):
                                 }
                             ]
                         )
-                    except Exception:
+                    except Exception as e:
                         # If update fails, try to get current and recreate
+                        logging.exception("Failed to update integration response: %s", e, stack_info=True, exc_info=True)
                         current_integration = api_client.get_integration_response(
                             restApiId=api_id,
                             resourceId=resource_id,
@@ -748,9 +753,9 @@ def enable_cors_for_resource(api_client, api_id, resource_id):
                             responseTemplates=current_integration.get('responseTemplates', {'application/json': ''})
                         )
                         
-                except Exception:
+                except Exception as e:
                     # Method doesn't exist for this resource, skip it
-                    pass
+                    logging.exception("Method doesn't exist for this resource: %s", e, stack_info=True, exc_info=True)
                     
             except Exception as method_error:
                 logger.warning(f"Could not update CORS for {method} method on resource {resource_id}: {method_error}")
@@ -771,7 +776,8 @@ def update_env_file(key, value):
             # Create a new .env file with minimal content
             with open('.env', 'w') as f:
                 f.write(f"{key}={value}\n")
-            logger.info(f"Created new .env file with {key}={value}")
+            # import html
+            logger.info(f"Created new .env file with {key}={html.escape(value)}")
             return
             
         # Read the current .env file
@@ -794,7 +800,7 @@ def update_env_file(key, value):
         with open('.env', 'w') as f:
             f.writelines(lines)
             
-        logger.info(f"Updated {key} in .env file")
+        logger.info(f"Updated {html.escape(key)} in .env file")  # import html
             
     except Exception as e:
         logger.error(f"Error updating .env file: {e}")

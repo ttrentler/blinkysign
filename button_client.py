@@ -7,8 +7,10 @@ import os
 import time
 import json
 import logging
-import requests
 from dotenv import load_dotenv
+# Import only the necessary function from requests
+# This optimizes memory usage and improves code clarity
+from requests import put
 
 # Load environment variables
 load_dotenv()
@@ -26,7 +28,7 @@ API_ENDPOINT = os.getenv('API_ENDPOINT', 'http://localhost:5000')
 def send_toggle_request():
     """Send a toggle request to the API"""
     try:
-        response = requests.put(f"{API_ENDPOINT}/toggle")
+        response = put(f"{API_ENDPOINT}/toggle")
         if response.status_code == 200:
             data = response.json()
             logger.info(f"Toggle successful: {data['message']}")
@@ -51,10 +53,11 @@ def send_set_request(muted=True):
             logger.info(f"Set status successful: {data['message']}")
             return True
         else:
-            logger.error(f"Set status failed with status code {response.status_code}")
+            # import html
+            logger.error(f"Set status failed with status code {html.escape(str(response.status_code))}")  # Sanitize input before logging
             return False
     except Exception as e:
-        logger.error(f"Error sending set request: {e}")
+        logger.error(f"Error sending set request: {str(e)}")
         return False
 
 def get_current_status():

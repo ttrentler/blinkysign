@@ -168,8 +168,8 @@
             <h2>Status Controls</h2>
             <button onclick="getStatus()">Get Status</button>
             <button onclick="toggleMute()">Toggle Mute</button>
-            <button class="red" onclick="setMuted(true)">Set Muted (Red)</button>
-            <button class="blue" onclick="setMuted(false)">Set Unmuted (Green)</button>
+            <button class="green" onclick="setMutedWithPulse(true)">Set Muted (Green)</button>
+            <button class="red" onclick="setMutedWithPulse(false)">Set Unmuted (Red)</button>
             <button onclick="turnOff()">Turn Off LEDs</button>
         </div>
         
@@ -360,7 +360,7 @@
         async function getStatus() {
             const data = await callApi('/status', 'GET');
             if (data) {
-                const status = data.muted ? 'Muted (Red)' : 'Unmuted (Green)';
+                const status = data.muted ? 'Muted (Green)' : 'Unmuted (Red)';
                 updateStatus(status, data);
             }
         }
@@ -369,7 +369,15 @@
             await callApi('/toggle', 'PUT');
         }
         
-        async function setMuted(muted) {
+        async function setMutedWithPulse(muted) {
+            // First trigger a 3-second pulse effect with the appropriate color
+            await callApi('/effects/pulse', 'PUT', {
+                color: muted ? 'green' : 'red',
+                cycles: 1,
+                duration: 3.0
+            });
+            
+            // Then set the muted state
             await callApi('/set', 'PUT', { muted: muted });
         }
         
