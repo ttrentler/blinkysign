@@ -1,0 +1,15 @@
+[Unit]
+Description=BlinkySign Control Panel HTTP Server
+After=blinkysign.service
+Requires=blinkysign.service
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__INSTALL_DIR__
+ExecStart=__INSTALL_DIR__/venv/bin/python -m http.server 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
