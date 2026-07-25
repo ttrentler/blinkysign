@@ -287,6 +287,17 @@ def get_controller():
     return _controller
 
 
+def reset_controller():
+    """Drop the cached controller so the next get_controller() rebuilds it.
+
+    Only useful in tests -- the LED strip is a process-wide singleton in
+    production and should not be swapped out under a running worker.
+    """
+    global _controller
+    with _controller_lock:
+        _controller = None
+
+
 def main():
     """Run through colors and effects to verify the strips are working."""
     controller = get_controller()
