@@ -64,6 +64,12 @@ class MqttConfig:
     keyfile: Optional[str] = None
     keepalive: int = 60
 
+    # Home Assistant MQTT discovery. On by default, because it is the point of
+    # having a broker for most people and costs two retained messages.
+    ha_discovery: bool = True
+    ha_prefix: str = "homeassistant"
+    ha_device_name: str = "BlinkySign"
+
 
 @dataclass
 class Config:
@@ -117,6 +123,12 @@ class Config:
             certfile=_env("BLINKYSIGN_MQTT_CERTFILE"),
             keyfile=_env("BLINKYSIGN_MQTT_KEYFILE"),
             keepalive=_env_int("BLINKYSIGN_MQTT_KEEPALIVE", default=60),
+            ha_discovery=_env_bool("BLINKYSIGN_HA_DISCOVERY", True),
+            ha_prefix=(
+                _env("BLINKYSIGN_HA_PREFIX", default="homeassistant") or "homeassistant"
+            ).rstrip("/"),
+            ha_device_name=_env("BLINKYSIGN_HA_DEVICE_NAME", default="BlinkySign")
+            or "BlinkySign",
         )
 
         return cls(

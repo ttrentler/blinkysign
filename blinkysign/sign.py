@@ -55,14 +55,44 @@ class SignController:
         return snapshot
 
     def refresh(self) -> Snapshot:
-        """Repaint the current state, e.g. at startup."""
-        return self._render(self._state.snapshot())
+        """Repaint the current mute state -- at startup, or to undo turn_off().
 
-    def _render(self, snapshot: Snapshot) -> Snapshot:
-        color = (
+        Sets led_on, because this lights the strip: without it the state would
+        claim the LEDs were off while they were visibly on, and Home
+        Assistant's light entity would show the wrong thing.
+        """
+        return self._render(self._state.set_led_on(True))
+
+    def power_on(self) -> Snapshot:
+        """Ensure the strip is lit, without disturbing a running effect.
+
+        Home Assistant's light entity publishes an effect command and then an
+        "ON" power command for a single light.turn_on(effect=...) call. A plain
+        refresh() here would submit a solid render and cancel the effect that
+        arrived a moment earlier, so selecting any effect in Home Assistant
+        would appear to do nothing.
+        """
+        if self._worker.has_effect():
+            # The effect is already lighting the strip. Leave it alone, but
+            # make the state it settles back into a lit one rather than dark.
+            snapshot = self._state.set_led_on(True)
+            self._worker.set_base(
+                Command(kind=SOLID, color=self._color_for(snapshot))
+            )
+            return snapshot
+
+        snapshot = self._state.snapshot()
+        if snapshot.led_on:
+            return snapshot
+        return self.refresh()
+
+    def _color_for(self, snapshot: Snapshot) -> RGB:
+        return (
             self._config.muted_color if snapshot.muted else self._config.unmuted_color
         )
-        self._worker.submit(Command(kind=SOLID, color=color))
+
+    def _render(self, snapshot: Snapshot) -> Snapshot:
+        self._worker.submit(Command(kind=SOLID, color=self._color_for(snapshot)))
         return snapshot
 
     # -- effects --------------------------------------------------------

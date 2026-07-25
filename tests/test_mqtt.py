@@ -93,6 +93,7 @@ def test_subscribes_to_all_command_topics(rig):
         "blinkysign/cmd/set",
         "blinkysign/cmd/toggle",
         "blinkysign/cmd/effect",
+        "blinkysign/cmd/power",
     }
 
 

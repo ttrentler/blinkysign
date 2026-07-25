@@ -23,6 +23,7 @@ import ssl
 from typing import Optional
 
 from blinkysign.config import MqttConfig
+from blinkysign.homeassistant import NO_EFFECT, discovery_messages, slugify
 from blinkysign.sign import BadEffectParams, SignController
 from blinkysign.worker import UnknownEffect
 
@@ -141,10 +142,35 @@ class MqttBridge:
             logger.error("MQTT connection refused (code %s)", rc)
             return
         logger.info("MQTT connected")
-        for name in ("set", "toggle", "effect"):
+        for name in ("set", "toggle", "effect", "power"):
             client.subscribe(self.command_topic(name), qos=1)
         client.publish(self.availability_topic, ONLINE, qos=1, retain=True)
+        # Announce before the first state publish, so Home Assistant has the
+        # entity definitions by the time the retained state arrives.
+        self._publish_discovery()
         self._publish_snapshot(self._sign.snapshot())
+
+    def _publish_discovery(self) -> None:
+        if not self._config.ha_discovery:
+            return
+        try:
+            messages = discovery_messages(
+                base_topic=self.base,
+                node_id=slugify(self._config.client_id),
+                friendly_name=self._config.ha_device_name,
+                effects=self._sign.effects,
+                discovery_prefix=self._config.ha_prefix,
+            )
+            for topic, payload in messages:
+                # Retained, so Home Assistant discovers the sign whenever it
+                # starts -- not only if the sign happens to boot afterwards.
+                self._client.publish(topic, json.dumps(payload), qos=1, retain=True)
+            logger.info(
+                "Published Home Assistant discovery for %d entities under %s/",
+                len(messages), self._config.ha_prefix,
+            )
+        except Exception:
+            logger.exception("failed to publish Home Assistant discovery")
 
     def _on_disconnect(self, client, userdata, rc, *args):
         if rc != 0:
@@ -167,6 +193,8 @@ class MqttBridge:
                 self._handle_set(payload)
             elif topic == self.command_topic("effect"):
                 self._handle_effect(payload)
+            elif topic == self.command_topic("power"):
+                self._handle_power(payload)
             else:
                 logger.debug("ignoring message on unhandled topic %s", topic)
         except Exception:
@@ -192,15 +220,41 @@ class MqttBridge:
             self._sign.set_muted(bool(payload["muted"]))
             return
 
-        raw = payload.get("_raw")
-        if isinstance(raw, bool):
-            self._sign.set_muted(raw)
-        elif isinstance(raw, str) and raw.lower() in ("on", "true", "muted", "1"):
-            self._sign.set_muted(True)
-        elif isinstance(raw, str) and raw.lower() in ("off", "false", "unmuted", "0"):
-            self._sign.set_muted(False)
-        else:
+        # Bare payloads, including the "ON"/"OFF" Home Assistant's switch
+        # entity publishes.
+        state = self._truthy(payload.get("_raw"))
+        if state is None:
             logger.warning("cmd/set without a usable 'muted' field: %r", payload)
+        else:
+            self._sign.set_muted(state)
+
+    @staticmethod
+    def _truthy(value) -> Optional[bool]:
+        """Interpret an on/off payload. None when it is not one."""
+        if isinstance(value, bool):
+            return value
+        if not isinstance(value, str):
+            return None
+        text = value.strip().lower()
+        if text in ("on", "true", "muted", "1"):
+            return True
+        if text in ("off", "false", "unmuted", "0"):
+            return False
+        return None
+
+    def _handle_power(self, payload: dict) -> None:
+        """Turn the strip on or off, independent of the mute state.
+
+        Home Assistant's light entity drives this. "on" repaints whatever the
+        current mute state is rather than forcing a colour of its own.
+        """
+        state = self._truthy(payload.get("state", payload.get("_raw")))
+        if state is None:
+            logger.warning("cmd/power without a usable on/off payload: %r", payload)
+        elif state:
+            self._sign.power_on()
+        else:
+            self._sign.turn_off()
 
     def _handle_effect(self, payload: dict) -> None:
         name = payload.get("effect") or payload.get("_raw")
@@ -210,6 +264,13 @@ class MqttBridge:
 
         if name == "off":
             self._sign.turn_off()
+            return
+
+        if name == NO_EFFECT:
+            # Home Assistant needs a member of effect_list meaning "not running
+            # an effect"; selecting it cancels the current animation and goes
+            # back to showing the mute state.
+            self._sign.refresh()
             return
 
         params = {k: v for k, v in payload.items() if k not in ("effect", "_raw")}

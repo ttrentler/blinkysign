@@ -120,7 +120,8 @@ Topics, under `BLINKYSIGN_MQTT_BASE_TOPIC` (default `blinkysign`):
 |---|---|---|
 | `blinkysign/cmd/toggle` | in | anything |
 | `blinkysign/cmd/set` | in | `{"muted": true}`, or `on`/`off` |
-| `blinkysign/cmd/effect` | in | `{"effect": "pulse", "color": "red"}` |
+| `blinkysign/cmd/effect` | in | `{"effect": "pulse", "color": "red"}`, or a bare effect name |
+| `blinkysign/cmd/power` | in | `on`/`off` — the strip, independent of mute state |
 | `blinkysign/state` | out | full state, retained |
 | `blinkysign/availability` | out | `online`/`offline`, retained |
 
@@ -133,6 +134,61 @@ certificate. See [.env.example](.env.example) for each shape.
 If you only want to reach the sign from elsewhere on your own machine's
 network, a Tailscale or Cloudflare Tunnel install is usually simpler than any
 broker.
+
+## Home Assistant
+
+With MQTT enabled, the sign announces itself and appears in Home Assistant on
+its own — no YAML. Point both at the same broker and it shows up as a
+**BlinkySign** device with two entities:
+
+| Entity | What it does |
+|---|---|
+| `switch.blinkysign_muted` | The on-air state. This is the one to automate. |
+| `light.blinkysign_leds` | The strip: on/off, plus the four effects. |
+
+Turning the switch on mutes the sign; the light turns the strip off entirely
+whatever the mute state is. The light's effect list contains the four effects
+plus `none`, which stops a running effect and goes back to showing the mute
+state.
+
+Discovery messages are retained, so Home Assistant finds the sign whenever it
+starts — the sign does not need to boot second. Entities are deliberately not
+removed when the sign shuts down; it reports `offline` through the availability
+topic instead, so your dashboard cards and automations survive a restart.
+
+To turn it off, or to change the discovery prefix:
+
+```
+BLINKYSIGN_HA_DISCOVERY=false
+BLINKYSIGN_HA_PREFIX=homeassistant
+BLINKYSIGN_HA_DEVICE_NAME=BlinkySign
+```
+
+An example automation — follow your calendar, so the sign is on whenever you
+are in a meeting:
+
+```yaml
+automation:
+  - alias: "On air when a meeting starts"
+    trigger:
+      - platform: state
+        entity_id: calendar.work
+        to: "on"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.blinkysign_muted
+
+  - alias: "Off air when the meeting ends"
+    trigger:
+      - platform: state
+        entity_id: calendar.work
+        to: "off"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.blinkysign_muted
+```
 
 ## Stream Deck
 

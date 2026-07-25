@@ -72,6 +72,7 @@ class LedWorker(threading.Thread):
         # The persistent render -- the muted/unmuted/off colour the sign
         # returns to when an effect finishes or is interrupted.
         self._base: Optional[Command] = None
+        self._running_effect = False
         self._cancel = threading.Event()
         self._idle = threading.Event()
         self._idle.set()
@@ -100,6 +101,26 @@ class LedWorker(threading.Thread):
     def wait_idle(self, timeout: Optional[float] = None) -> bool:
         """Block until the worker has nothing left to do. For tests."""
         return self._idle.wait(timeout=timeout)
+
+    def has_effect(self) -> bool:
+        """True when an effect is running or queued to run next."""
+        with self._cv:
+            if self._pending is not None:
+                return self._pending.is_effect
+            return self._running_effect
+
+    def set_base(self, command: Command) -> None:
+        """Change the resting render without interrupting a running effect.
+
+        submit() would cancel the effect; this only changes what the sign
+        returns to once the effect finishes. If nothing is running, it renders
+        immediately.
+        """
+        with self._cv:
+            self._base = command
+            idle = self._pending is None and not self._running_effect
+        if idle:
+            self.submit(command)
 
     # -- thread body ----------------------------------------------------
 
@@ -135,6 +156,7 @@ class LedWorker(threading.Thread):
         if builder is None:
             raise UnknownEffect(command.effect)
 
+        self._running_effect = True
         self._notify_effect(command.effect)
         frames = builder(self._controller, command.params)
         try:
@@ -147,6 +169,7 @@ class LedWorker(threading.Thread):
                     break
         finally:
             frames.close()
+            self._running_effect = False
             self._notify_effect(None)
             self._restore_base()
 
