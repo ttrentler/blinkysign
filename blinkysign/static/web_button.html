@@ -144,7 +144,10 @@
     
     <script>
         // Configuration
-        const API_ENDPOINT = 'http://localhost:5000'; // Change this to your API endpoint
+        // Served by the sign itself at /button, so requests are relative.
+        // This used to be hardcoded to a localhost URL, which meant opening
+        // the page on a phone hit the phone rather than the sign.
+        const API_ENDPOINT = '';
         
         // Elements
         const toggleButton = document.getElementById('toggleButton');

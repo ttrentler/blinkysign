@@ -1,8 +1,11 @@
-boto3==1.34.0
-Flask==2.3.3
-requests==2.31.0
-python-dotenv==1.0.0
-adafruit-circuitpython-neopixel-spi==1.0.12
-AWSIoTPythonSDK==1.5.4
-lgpio==0.2.2.0
-flask-cors==4.0.0
+# Dependencies live in pyproject.toml. This file is kept so that the habitual
+#     pip install -r requirements.txt
+# still does the right thing.
+#
+# On a Raspberry Pi you want the hardware extra instead:
+#     pip install -e '.[pi]'
+#
+# Needs a reasonably recent pip. Versions before ~21.3 cannot install an
+# editable pyproject.toml project and will skip the line with only a warning,
+# leaving nothing installed -- run `pip install --upgrade pip` first.
+-e .

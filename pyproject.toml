@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blinkysign"
+description = "An internet-connected on-air sign for the Raspberry Pi"
+readme = "README.md"
+license = { file = "LICENSE" }
+dynamic = ["version"]
+
+# Raspberry Pi OS Bullseye still ships Python 3.9 and plenty of them are still
+# in the field. A hobby appliance should not force an OS upgrade, so this
+# codebase uses Optional[X] rather than X | None throughout.
+requires-python = ">=3.9"
+
+dependencies = [
+    "Flask>=2.3,<4",
+    "flask-cors>=4,<7",
+    "python-dotenv>=1,<2",
+    "paho-mqtt>=2,<3",
+    "zeroconf>=0.130",
+]
+
+[project.optional-dependencies]
+# Hardware-only dependencies. Installed on the Pi by install.sh; deliberately
+# omitted elsewhere so the package stays importable and testable on a laptop.
+pi = [
+    "adafruit-circuitpython-neopixel-spi>=1,<2",
+    "gpiozero>=2,<3",
+    "lgpio>=0.2",
+]
+dev = [
+    "pytest>=7",
+    "pytest-timeout>=2",
+]
+
+[project.scripts]
+blinkysign = "blinkysign.service:main"
+blinkysign-ledtest = "blinkysign.leds.controller:main"
+
+[tool.setuptools]
+packages = ["blinkysign", "blinkysign.leds"]
+
+[tool.setuptools.dynamic]
+version = { attr = "blinkysign.__version__" }
+
+[tool.setuptools.package-data]
+blinkysign = ["static/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 60

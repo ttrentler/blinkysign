@@ -1,544 +1,287 @@
 # BlinkySign
 
-A project for creating an internet-connected On-AIR 3D printed sign controlled via Raspberry Pi.
+An internet-connected on-air sign: a 3D-printed enclosure, a WS2812B LED strip
+and a Raspberry Pi that turns the sign a colour when you are muted.
 
-## Description
+## Install
 
-BlinkySign is a Raspberry Pi-powered LED sign that uses WS2812B LED strips to indicate mute/unmute status. It can be remotely controlled via HTTP requests from a remote button and integrates with AWS IoT Core for cloud connectivity.
-
-## Features
-
-- Control WS2812B LED strips from a Raspberry Pi using SPI interface
-- Remote control via HTTP requests
-- AWS IoT Core integration for reliable connectivity
-- Simple REST API for status control
-- Multiple lighting effects (solid colors, rainbow, pulse)
-- 3D printable enclosure
-- API key authentication for secure remote access
-- Stream Deck integration support
-
-## Hardware Requirements
-
-- Raspberry Pi (Pi 5 recommended for SPI interface)
-- WS2812B LED strips
-- Jumper wires
-- 5V power supply (adequate for your LED strips)
-- 3D printed enclosure (see 3dprints folder)
-- Optional: Physical button for local control
-- Optional: Elgato Stream Deck for remote control
-- Optional: Raspberry Pi Breakout board - https://www.amazon.com/dp/B084C69VSQ
-- Look at this site for an example of wiring - https://core-electronics.com.au/guides/fully-addressable-rgb-raspberry-pi/
-
-
-## Software Requirements
-
-- Python 3.10+
-- AWS account with access to IoT Core and API Gateway (for cloud connectivity)
-- Dependencies listed in requirements.txt
-- System package: `lgpio` (install with `sudo apt-get install -y python3-lgpio`)
-
-## Project Files
-
-The project consists of the following key files:
-
-- **app.py**: Flask web server that provides the HTTP API endpoints for controlling the sign
-- **iot_client.py**: Connects to AWS IoT Core and subscribes to MQTT topics to receive commands
-- **led_controller.py**: Controls the WS2812B LED strips via SPI interface
-- **aws_setup.py**: Sets up all required AWS resources (IoT Thing, API Gateway, etc.)
-- **connect_api_to_iot.py**: Connects API Gateway to IoT Core for remote control
-- **cleanup_aws.py**: Removes all AWS resources created by the project
-- **button_client.py**: Simple client for sending commands to the sign from a remote device
-- **physical_button.py**: Controls the sign using a physical button connected to GPIO
-- **control_panel.html**: Web-based control panel for the sign
-- **web_button.html**: Simple web page with a button to toggle the sign
-- **setup.sh**: Installation script for setting up the project
-- **.env.example**: Example environment variables file
-- **requirements.txt**: Python dependencies
-
-## Installation Options
-
-You can install BlinkySign in two ways:
-1. **Local-Only Install**: For use on a local network without AWS connectivity
-2. **AWS + Local Install**: Full installation with cloud connectivity
-
-### Local-Only Install
-
-If you want to run BlinkySign on a local network without AWS connectivity:
-
-1. **Clone the repository and install dependencies**:
-   ```bash
-   git clone https://github.com/ttrentler/blinkysign.git
-   cd blinkysign
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
-
-2. **Create a minimal `.env` file**:
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit the `.env` file to include only the local settings:
-   ```
-   # Flask server port
-   PORT=5000
-   
-   # LED Configuration
-   LED_COUNT=30
-   LED_BRIGHTNESS=0.5
-   
-   # Button Configuration
-   BUTTON_PIN=17
-   
-   # API endpoint for button client (use your Raspberry Pi's local IP)
-   API_ENDPOINT=http://192.168.1.X:5000
-   ```
-   
-   Replace `192.168.1.X` with your Raspberry Pi's actual IP address.
-
-3. **Run the Flask server**:
-   ```bash
-   source venv/bin/activate
-   python app.py
-   ```
-   
-   This will start the local HTTP server on port 5000.
-
-4. **Access the control panel**:
-   ```bash
-   source venv/bin/activate
-   python -m http.server 8000
-   ```
-   
-   Then open a browser on any device on your local network and navigate to:
-   ```
-   http://192.168.1.X:8000/control_panel.html
-   ```
-   
-   Make sure to select "Local" in the API endpoint dropdown.
-
-5. **For physical button control** (optional):
-   ```bash
-   source venv/bin/activate
-   python physical_button.py
-   ```
-
-6. **For remote button control** from another device:
-   Edit the `.env` file on the remote device to point to your Raspberry Pi:
-   ```
-   API_ENDPOINT=http://192.168.1.X:5000
-   ```
-   
-   Then run:
-   ```bash
-   source venv/bin/activate
-   python button_client.py
-   ```
-
-### AWS + Local Install
-
-For full installation with cloud connectivity:
-
-1. **Clone the repository and install dependencies**:
-   ```bash
-   git clone https://github.com/ttrentler/blinkysign.git
-   cd blinkysign
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
-
-2. **Configure AWS CLI** (if not already done):
-   ```bash
-   aws configure
-   ```
-   
-   Enter your AWS Access Key ID, Secret Access Key, default region, and output format.
-
-3. **Create a `.env` file**:
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit the `.env` file with your LED configuration:
-   ```
-   # Flask server port
-   PORT=5000
-   
-   # LED Configuration
-   LED_COUNT=30
-   LED_BRIGHTNESS=0.5
-   
-   # Button Configuration
-   BUTTON_PIN=17
-   
-   # AWS Configuration
-   AWS_REGION=us-east-1
-   ```
-
-4. **Deploy AWS resources using CloudFormation**:
-   ```bash
-   python deploy_aws.py
-   ```
-   
-   This will:
-   - Create a CloudFormation stack with all necessary AWS resources
-   - Set up IoT Core Thing, certificates, and policies
-   - Create API Gateway with all required endpoints and CORS support
-   - Configure API key authentication
-   - Update your `.env` file with all endpoints and credentials
-   - Update the control panel HTML with the new endpoints
-
-5. **Connect API Gateway to IoT Core**:
-   ```bash
-   python connect_api_to_iot.py
-   ```
-   
-   This will:
-   - Create necessary IAM roles and policies
-   - Set up IoT Core topic rules
-   - Replace mock integrations with real IoT Core integrations
-   - Deploy the updated API Gateway configuration
-
-6. **Start the local server**:
-   ```bash
-   source venv/bin/activate
-   python app.py
-   ```
-
-7. **Connect to AWS IoT Core**:
-   ```bash
-   source venv/bin/activate
-   python iot_client.py
-   ```
-
-8. **Access the control panel**:
-   ```bash
-   source venv/bin/activate
-   python -m http.server 8000
-   ```
-   
-   Then open a browser and navigate to:
-   ```
-   http://localhost:8000/control_panel.html
-   ```
-   
-   You can switch between local and AWS endpoints in the control panel.
-   
-9. **Verify the connection**:
-   After running the script, test the connection by:
-   - Opening the control panel in your browser
-   - Selecting the AWS endpoint
-   - Clicking any control button (e.g., Toggle Mute)
-   - Checking that your Raspberry Pi's LEDs respond to the command
-
-   If the connection doesn't work:
-   - Make sure your `.env` file has the correct `API_ID` value (extracted from `API_ENDPOINT`)
-   - Ensure your IoT client is running on the Raspberry Pi
-   - Check AWS CloudWatch logs for any errors in the API Gateway or IoT Core
-
-## LED Strip Connection
-
-WS2812B LED strips with SPI interface require these connections:
-- Power (5V)
-- Ground (GND)
-- Data (MOSI pin)
-- Clock (SCK pin)
-
-The default configuration uses the Raspberry Pi's SPI interface which is more compatible with Pi 5.
-
-**Important**: WS2812B strips may require a separate power supply if you're using many LEDs, as they can draw significant current. The Raspberry Pi GPIO pins cannot provide enough power for long strips.
-
-## API Endpoints
-
-All API endpoints require an API key when accessed through the AWS API Gateway:
-
-- `GET /status` - Get current mute status
-- `PUT /toggle` - Toggle mute status
-- `PUT /set` - Set mute status explicitly (requires JSON body with `muted` field)
-- `PUT /effects/rainbow` - Trigger rainbow effect
-- `PUT /effects/pulse` - Trigger pulse effect (optional JSON body with `color` and `cycles` fields)
-- `PUT /off` - Turn off all LEDs
-- `GET /health` - Health check endpoint
-
-## Web Control Panel
-
-A web-based control panel is included in the project:
+On the Raspberry Pi:
 
 ```bash
-# Run a simple HTTP server
-python -m http.server 8000
+curl -fsSL https://raw.githubusercontent.com/ttrentler/blinkysign/master/install.sh | bash
 ```
 
-Then open your browser to:
-```
-http://localhost:8000/control_panel.html
-```
-
-The control panel allows you to:
-- Switch between local and AWS API endpoints
-- Enter your API key for AWS authentication
-- Control all BlinkySign functions through a user-friendly interface
-
-## Stream Deck Integration
-
-You can control your BlinkySign using an Elgato Stream Deck:
-
-1. Install the Stream Deck software on your computer
-2. Install the "System: Website" plugin
-3. Configure buttons with the following settings:
-
-   **Toggle Mute Button:**
-   - URL: `https://[your-api-gateway-url]/toggle`
-   - Method: PUT
-   - Headers: `x-api-key: [your-api-key]`
-
-   **Set Muted (Red) Button:**
-   - URL: `https://[your-api-gateway-url]/set`
-   - Method: PUT
-   - Body: `{"muted": true}`
-   - Content Type: application/json
-   - Headers: `x-api-key: [your-api-key]`
-
-   **Rainbow Effect Button:**
-   - URL: `https://[your-api-gateway-url]/effects/rainbow`
-   - Method: PUT
-   - Headers: `x-api-key: [your-api-key]`
-
-Your API Gateway URL and API key are saved in:
-- API URL: `.env` file under `API_ENDPOINT`
-- API Key: `certs/api_key.txt`
-
-## Remote Button Setup
-
-The remote button can be any device capable of sending HTTP requests. You can use:
-
-1. Another Raspberry Pi with a physical button
-2. A smartphone app with a virtual button
-3. A web interface with a button
-4. Elgato Stream Deck (see Stream Deck Integration section)
-
-To use the provided button client:
-
-1. Edit the `.env` file with the API endpoint
-2. Run the button client:
-   ```
-   python button_client.py
-   ```
-
-## AWS Architecture
-
-The project uses the following AWS services:
-
-- **IoT Core**: For reliable MQTT communication
-  - IoT Thing with certificates and policies
-  - MQTT topics for device communication
-  - IoT Core endpoint for secure connectivity
-
-- **API Gateway**: For HTTP API endpoints
-  - REST API with API key authentication
-  - CORS support for web clients
-  - Mock integrations for initial testing (replaced with real IoT Core integrations during deployment)
-  - Endpoints for status, toggle, effects, and health check
-
-The deployment process involves two steps:
-1. Initial setup with mock integrations for testing
-2. Connecting to IoT Core with real integrations
-
-All AWS resources are managed through CloudFormation for consistent and repeatable deployments. The CloudFormation template (`cloudformation.yaml`) defines:
-
-1. IoT Core resources:
-   - IoT Thing
-   - Thing policy
-   - Certificates and attachments
-
-2. API Gateway resources:
-   - REST API with regional endpoint
-   - API key and usage plan
-   - Resources and methods for all endpoints
-   - CORS configuration
-   - Initial mock integrations (replaced with real IoT Core integrations)
-
-3. Lambda function for certificate management:
-   - Creates and manages IoT certificates
-   - Saves certificates to local files
-   - Updates environment configuration
-
-To deploy or update the AWS infrastructure:
-```bash
-python deploy_aws.py
-```
-
-This script will create or update the CloudFormation stack and configure your local environment.
-
-## Testing the LED Strips
-
-You can test your LED strips with:
+That installs the dependencies, enables SPI, creates the virtual environment,
+installs a systemd service and starts it. When it finishes, open:
 
 ```
-python led_controller.py
+http://blinkysign.local:5000
 ```
 
-This will run through various colors and effects to verify your LED strips are working correctly.
+The installer prints the IP address too, in case mDNS is not available on your
+network. If it tells you a reboot is required, the LEDs will not light up until
+you do — enabling SPI needs one.
 
-You can also test the SPI interface specifically with:
+Re-run the same command to upgrade. It will not overwrite your `.env`.
 
-```
-python boardtest.py
-```
-
-## Auto-Start on Boot
-
-To configure BlinkySign to automatically start on boot:
-
-### Local-Only Installation
-
-1. **Create a startup script**:
+To remove the service (keeping the code and your settings):
 
 ```bash
-sudo nano /path/to/blinkysign/startup.sh
+curl -fsSL https://raw.githubusercontent.com/ttrentler/blinkysign/master/install.sh | bash -s -- --uninstall
 ```
 
-Add this content:
+## Hardware
+
+- Raspberry Pi (any model; the Pi 5 works)
+- WS2812B LED strip
+- 5V power supply sized for your strip — the GPIO pins cannot power a long one
+- 3D-printed enclosure, in [3dprints/](3dprints/)
+- Optional: a momentary button
+- Optional: an Elgato Stream Deck
+
+The strip connects to 5V, ground, MOSI (data) and SCK (clock). SPI is used
+rather than bit-banged GPIO because it works on the Pi 5. There is a good wiring
+walkthrough at
+[core-electronics](https://core-electronics.com.au/guides/fully-addressable-rgb-raspberry-pi/).
+
+## Configuration
+
+Settings live in `.env` next to the code. See [.env.example](.env.example) for
+the full list; the common ones:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `BLINKYSIGN_PORT` | `5000` | Web server port |
+| `BLINKYSIGN_LED_COUNT` | `30` | LEDs on the strip |
+| `BLINKYSIGN_LED_BRIGHTNESS` | `0.5` | 0.0–1.0 |
+| `BLINKYSIGN_MUTED_COLOR` | `green` | Name, `#RRGGBB` or `r,g,b` |
+| `BLINKYSIGN_UNMUTED_COLOR` | `red` | Name, `#RRGGBB` or `r,g,b` |
+| `BLINKYSIGN_BUTTON_PIN` | unset | BCM pin for a physical button |
+| `BLINKYSIGN_API_TOKEN` | unset | Require a token on state changes |
+
+After editing: `sudo systemctl restart blinkysign`.
+
+> The default is **green for muted, red for unmuted**. Swap the two colour
+> settings if you prefer the opposite convention.
+
+## The web interface
+
+The sign serves its own pages — there is no second web server to run.
+
+- `/` — the full control panel
+- `/button` — a single large toggle, good on a phone
+
+## API
+
+```
+GET  /status              current state
+PUT  /toggle              flip muted
+PUT  /set                 {"muted": true}
+PUT  /off                 all LEDs off
+GET  /health              status, and whether the LEDs are actually working
+GET  /api/config          what this sign supports
+
+PUT  /effects/rainbow
+PUT  /effects/pulse       {"color": "blue", "cycles": 3, "duration": 1.0}
+PUT  /effects/theater     {"color": "white", "iterations": 10}
+PUT  /effects/wipe        {"color": "blue"}
+```
+
+Colours accept a name (`red`, `green`, `blue`, `yellow`, `purple`, `cyan`,
+`white`), `#RRGGBB`, or `r,g,b`.
+
+**Effects return `202 Accepted` and run in the background.** They no longer
+block the request, and any later command interrupts a running effect within a
+frame — so pressing "muted" during a rainbow takes effect immediately rather
+than after the animation finishes.
+
+`/health` returns `degraded` rather than `healthy` when the LED strip is not
+actually available (SPI disabled, strip unplugged, hardware libraries missing).
+It stays HTTP 200 either way so uptime checks do not flap.
+
+If `BLINKYSIGN_API_TOKEN` is set, every state-changing request needs it, as
+either `x-api-key: <token>` or `Authorization: Bearer <token>`. `/status` and
+`/health` stay open. With no token set the API is open to your network, which
+is the behaviour previous versions had.
+
+## Remote control over MQTT
+
+The sign speaks plain MQTT to any broker — no AWS account required. Set the
+broker in `.env` and restart.
+
+```
+BLINKYSIGN_MQTT_ENABLED=true
+BLINKYSIGN_MQTT_HOST=localhost
+```
+
+Topics, under `BLINKYSIGN_MQTT_BASE_TOPIC` (default `blinkysign`):
+
+| Topic | Direction | Payload |
+|---|---|---|
+| `blinkysign/cmd/toggle` | in | anything |
+| `blinkysign/cmd/set` | in | `{"muted": true}`, or `on`/`off` |
+| `blinkysign/cmd/effect` | in | `{"effect": "pulse", "color": "red"}`, or a bare effect name |
+| `blinkysign/cmd/power` | in | `on`/`off` — the strip, independent of mute state |
+| `blinkysign/state` | out | full state, retained |
+| `blinkysign/availability` | out | `online`/`offline`, retained |
+
+All four effects work over MQTT, exactly as over HTTP.
+
+Any broker will do: a local Mosquitto, a free HiveMQ or EMQX tier, or AWS IoT
+Core directly with `BLINKYSIGN_MQTT_TLS=mutual` on port 8883 and your device
+certificate. See [.env.example](.env.example) for each shape.
+
+If you only want to reach the sign from elsewhere on your own machine's
+network, a Tailscale or Cloudflare Tunnel install is usually simpler than any
+broker.
+
+## Home Assistant
+
+With MQTT enabled, the sign announces itself and appears in Home Assistant on
+its own — no YAML. Point both at the same broker and it shows up as a
+**BlinkySign** device with two entities:
+
+| Entity | What it does |
+|---|---|
+| `switch.blinkysign_muted` | The on-air state. This is the one to automate. |
+| `light.blinkysign_leds` | The strip: on/off, plus the four effects. |
+
+Turning the switch on mutes the sign; the light turns the strip off entirely
+whatever the mute state is. The light's effect list contains the four effects
+plus `none`, which stops a running effect and goes back to showing the mute
+state.
+
+Discovery messages are retained, so Home Assistant finds the sign whenever it
+starts — the sign does not need to boot second. Entities are deliberately not
+removed when the sign shuts down; it reports `offline` through the availability
+topic instead, so your dashboard cards and automations survive a restart.
+
+To turn it off, or to change the discovery prefix:
+
+```
+BLINKYSIGN_HA_DISCOVERY=false
+BLINKYSIGN_HA_PREFIX=homeassistant
+BLINKYSIGN_HA_DEVICE_NAME=BlinkySign
+```
+
+An example automation — follow your calendar, so the sign is on whenever you
+are in a meeting:
+
+```yaml
+automation:
+  - alias: "On air when a meeting starts"
+    trigger:
+      - platform: state
+        entity_id: calendar.work
+        to: "on"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.blinkysign_muted
+
+  - alias: "Off air when the meeting ends"
+    trigger:
+      - platform: state
+        entity_id: calendar.work
+        to: "off"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.blinkysign_muted
+```
+
+## Stream Deck
+
+Use the "System: Website" action:
+
+| Button | URL | Method | Body |
+|---|---|---|---|
+| Toggle | `http://blinkysign.local:5000/toggle` | PUT | |
+| Muted | `http://blinkysign.local:5000/set` | PUT | `{"muted": true}` |
+| Rainbow | `http://blinkysign.local:5000/effects/rainbow` | PUT | |
+
+Add `x-api-key` as a header if you set a token. Sample pages are in
+[streamdeck-buttons/](streamdeck-buttons/).
+
+## Service management
+
 ```bash
-#!/bin/bash
-# Get the directory where the script is located
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-cd "$SCRIPT_DIR"
-source venv/bin/activate
-python app.py &
-python -m http.server 8000 &
+systemctl status blinkysign
+journalctl -u blinkysign -f
+sudo systemctl restart blinkysign
 ```
 
-Make it executable:
-```bash
-chmod +x /path/to/blinkysign/startup.sh
-```
+One service, started at boot. Stopping it turns the LEDs off.
 
-2. **Create a systemd service file**:
+## Testing the strip
 
 ```bash
-sudo nano /etc/systemd/system/blinkysign.service
+~/blinkysign/.venv/bin/blinkysign-ledtest
 ```
 
-Add this content:
-```
-[Unit]
-Description=BlinkySign Service
-After=network.target
+Cycles through colours and effects. It runs without hardware too, reporting
+which backend it used — useful for telling "the code is broken" apart from "the
+wiring is broken".
 
-[Service]
-ExecStart=/path/to/blinkysign/startup.sh
-User=your-username
-WorkingDirectory=/path/to/blinkysign
-Restart=always
-RestartSec=5
+## Development
 
-[Install]
-WantedBy=multi-user.target
-```
-
-3. **Enable and start the service**:
+The package imports and tests without any Raspberry Pi hardware:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable blinkysign.service
-sudo systemctl start blinkysign.service
+python3 -m venv .venv
+.venv/bin/pip install -e '.[dev]'
+.venv/bin/pytest
 ```
 
-### AWS + Local Installation
+A mock LED backend records what would have been displayed, so the effects,
+worker and API are all testable on a laptop. Force it with
+`BLINKYSIGN_BACKEND=mock`.
 
-If you've chosen the AWS + Local installation option, you'll also want to start the IoT client on boot:
+On a Pi, install `.[pi]` as well to get the hardware libraries. There is no CI,
+so please run `pytest` before sending a change — and note that a laptop cannot
+exercise the SPI or GPIO paths.
 
-1. **Create an IoT client startup script**:
+Layout:
 
-```bash
-sudo nano /path/to/blinkysign/iot_startup.sh
+```
+blinkysign/
+  service.py      composition root: one process, one systemd unit
+  server.py       HTTP API and the control panel
+  sign.py         the only thing HTTP, MQTT and the button call
+  state.py        thread-safe state, shared by every input
+  worker.py       the single thread that owns the LED strip
+  mqtt.py         MQTT bridge
+  button.py       physical button
+  discovery.py    mDNS
+  leds/           the strip, and its SPI / mock backends
 ```
 
-Add this content:
-```bash
-#!/bin/bash
-# Get the directory where the script is located
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-cd "$SCRIPT_DIR"
-source venv/bin/activate
-python iot_client.py
-```
+## Upgrading from an earlier version
 
-Make it executable:
-```bash
-chmod +x /path/to/blinkysign/iot_startup.sh
-```
+Several scripts are gone, because one process now does all of it:
 
-2. **Create a systemd service file for the IoT client**:
+| Removed | Replacement |
+|---|---|
+| `app.py` | `blinkysign` (the service) |
+| `iot_client.py` | built-in MQTT bridge |
+| `physical_button.py` | built-in button support, via `BLINKYSIGN_BUTTON_PIN` |
+| `button_client.py` | `curl -X PUT http://blinkysign.local:5000/toggle` |
+| `setup.sh` | `install.sh` |
+| `python -m http.server 8000` | the sign serves its own panel |
 
-```bash
-sudo nano /etc/systemd/system/blinkysign-iot.service
-```
+Existing `.env` files keep working: `PORT`, `LED_COUNT`, `LED_BRIGHTNESS` and
+`BUTTON_PIN` are still read.
 
-Add this content:
-```
-[Unit]
-Description=BlinkySign IoT Client Service
-After=network.target
-Wants=blinkysign.service
+The AWS CloudFormation deployment has been retired to
+[legacy/aws/](legacy/aws/) — it did not work, and that directory's README
+explains exactly why. Use MQTT instead.
 
-[Service]
-ExecStart=/path/to/blinkysign/iot_startup.sh
-User=your-username
-WorkingDirectory=/path/to/blinkysign
-Restart=always
-RestartSec=10
+## Security
 
-[Install]
-WantedBy=multi-user.target
-```
-
-3. **Enable and start the IoT service**:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable blinkysign-iot.service
-sudo systemctl start blinkysign-iot.service
-```
-
-4. **Check the status of both services**:
-
-```bash
-sudo systemctl status blinkysign.service
-sudo systemctl status blinkysign-iot.service
-```
-
-## Installation Path
-
-When following the instructions in this README, replace `/path/to/blinkysign` with your actual installation path. For example:
-- If you installed in your home directory: `/home/username/blinkysign`
-- If you installed on your desktop: `/home/username/Desktop/blinkysign`
-
-Also replace `your-username` with your actual system username.
-
-Make sure to use the correct path in all configuration files, especially in the systemd service files.
-
-After rebooting, your BlinkySign will automatically start the Flask app, HTTP server, and IoT client (if enabled). You can access the control panel by navigating to `http://[raspberry-pi-ip]:8000/control_panel.html` from any device on your network.
-
-## Cleaning Up AWS Resources
-
-When you're done with the project or want to remove all AWS resources created by it, you can delete the CloudFormation stack:
-
-```bash
-aws cloudformation delete-stack --stack-name blinkysign-stack
-```
-
-This will automatically delete all AWS resources created by the stack, including:
-- IoT Thing, certificates, and policies
-- API Gateway, stages, and API keys
-- Lambda functions and IAM roles
-- Any other resources created by the CloudFormation template
-
-The stack deletion will be clean and complete, ensuring no orphaned resources are left behind.
+If you have ever run the old `deploy_aws.py`, please read
+[SECURITY.md](SECURITY.md): it granted your own AWS account administrative IoT
+permissions and never removed them.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT — see [LICENSE](LICENSE).

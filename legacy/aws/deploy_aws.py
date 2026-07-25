@@ -84,9 +84,6 @@ def deploy_cloudformation():
         update_env_file('IOT_ENDPOINT', outputs['IoTEndpoint'])
         update_env_file('IOT_THING_NAME', outputs['ThingName'])
         
-        # Update control panel HTML
-        update_control_panel_html(outputs['ApiEndpoint'], outputs['ApiKey'])
-        
         logger.info("Stack deployment completed successfully!")
         logger.info(f"API Endpoint: {outputs['ApiEndpoint']}")
         logger.info(f"IoT Endpoint: {outputs['IoTEndpoint']}")
@@ -109,8 +106,7 @@ def update_env_file(key, value):
             # Create a new .env file with minimal content
             with open('.env', 'w') as f:
                 f.write(f"{key}={value}\n")
-            # import html
-            logger.info(f"Created new .env file with {key}={html.escape(value)}")
+            logger.info(f"Created new .env file with {key}")
             return
             
         # Read the current .env file
@@ -133,39 +129,10 @@ def update_env_file(key, value):
         with open('.env', 'w') as f:
             f.writelines(lines)
             
-        logger.info(f"Updated {html.escape(key)} in .env file") # import html
+        logger.info(f"Updated {key} in .env file")
             
     except Exception as e:
         logger.error(f"Error updating .env file: {e}")
-
-def update_control_panel_html(api_endpoint, api_key):
-    """Update the control panel HTML with the new API endpoint and key"""
-    try:
-        control_panel_path = 'control_panel.html'
-        
-        # Check if the file exists
-        if not os.path.exists(control_panel_path):
-            logger.warning(f"Control panel file not found: {control_panel_path}")
-            return
-        
-        # Read the current HTML file
-        with open(control_panel_path, 'r') as f:
-            html_content = f.read()
-        
-        # Replace the API Gateway URL placeholder
-        html_content = html_content.replace('API_GATEWAY_URL_PLACEHOLDER', api_endpoint)
-        
-        # Replace the API key placeholder
-        html_content = html_content.replace('API_KEY_PLACEHOLDER', api_key)
-        
-        # Write the updated content back to the file
-        with open(control_panel_path, 'w') as f:
-            f.write(html_content)
-            
-        logger.info(f"Updated control panel HTML with new API endpoint and API key")
-        
-    except Exception as e:
-        logger.error(f"Error updating control panel HTML: {e}")
 
 if __name__ == "__main__":
     logger.info("Starting AWS deployment...")
