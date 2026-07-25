@@ -32,6 +32,11 @@ if [ "$(id -u)" -ne 0 ]; then
     SUDO="sudo"
 fi
 
+# id -un rather than $USER: $USER is not set in a non-login shell, which is
+# exactly what `curl ... | bash` gives you, and under `set -u` that aborts the
+# install partway through.
+RUN_USER="$(id -un)"
+
 # ---------------------------------------------------------------- uninstall
 
 uninstall() {
@@ -154,14 +159,14 @@ chmod 600 .env
 
 for group in spi gpio; do
     if getent group "$group" >/dev/null 2>&1; then
-        $SUDO usermod -aG "$group" "$USER" 2>/dev/null || true
+        $SUDO usermod -aG "$group" "$RUN_USER" 2>/dev/null || true
     fi
 done
 
 # ------------------------------------------------------------------- service
 
 log "Installing the systemd unit"
-sed -e "s|@USER@|$USER|g" \
+sed -e "s|@USER@|$RUN_USER|g" \
     -e "s|@DIR@|$INSTALL_DIR|g" \
     -e "s|@VENV@|$INSTALL_DIR/.venv|g" \
     systemd/blinkysign.service.in | $SUDO tee "$UNIT_PATH" >/dev/null
@@ -172,11 +177,19 @@ $SUDO systemctl restart "${SERVICE_NAME}.service"
 
 # -------------------------------------------------------------------- report
 
-PORT="$(grep -E '^\s*(BLINKYSIGN_)?PORT=' .env 2>/dev/null | tail -1 | cut -d= -f2 | tr -d '[:space:]')"
+# `|| true` on each: a setting that is absent or commented out makes grep exit
+# 1, and under `set -o pipefail` that aborts the script -- after the service is
+# already installed and running, so the user never sees the URL and `curl | bash`
+# looks like it failed.
+read_setting() {
+    grep -E "^\s*$1=" .env 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '[:space:]' || true
+}
+
+PORT="$(read_setting '(BLINKYSIGN_)?PORT')"
 PORT="${PORT:-5000}"
-NAME="$(grep -E '^\s*BLINKYSIGN_MDNS_NAME=' .env 2>/dev/null | tail -1 | cut -d= -f2 | tr -d '[:space:]')"
+NAME="$(read_setting 'BLINKYSIGN_MDNS_NAME')"
 NAME="${NAME:-blinkysign}"
-IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+IP="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
 
 echo
 log "BlinkySign is installed and running."
