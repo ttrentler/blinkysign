@@ -1,0 +1,37 @@
+[Unit]
+Description=BlinkySign
+Documentation=https://github.com/ttrentler/blinkysign
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+# The LED strip is on SPI and the button on GPIO. Granting the groups here
+# means the unit works on the first boot after install, without waiting for the
+# user's next login to pick up their new group membership.
+SupplementaryGroups=spi gpio
+WorkingDirectory=@DIR@
+# The leading dash makes a missing .env non-fatal.
+#
+# Note this is read by systemd, not a shell: no `export`, no $VAR expansion and
+# no quoted values containing spaces. Keep it to plain KEY=value lines.
+EnvironmentFile=-@DIR@/.env
+ExecStart=@VENV@/bin/blinkysign
+Restart=on-failure
+RestartSec=5
+
+# SIGINT rather than the default SIGTERM: both are handled, but this matches
+# what pressing Ctrl-C does when running by hand, so there is one shutdown path
+# to reason about. The handler turns the LEDs off before exiting -- without it
+# a `systemctl stop` left the sign lit.
+KillSignal=SIGINT
+TimeoutStopSec=10
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
