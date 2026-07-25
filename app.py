@@ -9,7 +9,9 @@ import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
-from led_controller import led_controller
+from led_controller import get_controller
+
+led_controller = get_controller()
 
 # Load environment variables
 load_dotenv()

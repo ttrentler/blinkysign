@@ -1,0 +1,28 @@
+# Secrets and device credentials -- never commit these.
+.env
+.env.*
+!.env.example
+certs/
+*.pem
+*.key
+*.crt
+*.csr
+api_key.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+venv/
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+.claude/settings.local.json

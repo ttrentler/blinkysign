@@ -1,5 +1,49 @@
 # 🔒 Security Policy
 
+## ⚠️ If you have ever run `deploy_aws.py` or `connect_api_to_iot.py`, read this first
+
+`connect_api_to_iot.py` contains a function, `ensure_iot_permissions()`, that grants
+**your own IAM principal `iot:*` on `*`** — full administrative access to IoT Core across
+your entire account. It does this twice: once as a customer-managed policy, and again as
+an inline policy "for immediate effect." `deploy_aws.py` calls it automatically as part of
+a normal deployment. Nothing in this repository ever revokes it.
+
+If you have run either script, that grant is still live in your account. Check and remove it:
+
+```bash
+# Who am I, and is this a user or an assumed role?
+aws sts get-caller-identity
+
+# For an IAM user (substitute your username):
+aws iam list-attached-user-policies --user-name YOUR_USERNAME
+aws iam list-user-policies --user-name YOUR_USERNAME
+
+aws iam detach-user-policy --user-name YOUR_USERNAME \
+  --policy-arn arn:aws:iam::YOUR_ACCOUNT_ID:policy/blinkysign-iot-admin-policy
+aws iam delete-user-policy --user-name YOUR_USERNAME \
+  --policy-name blinkysign-iot-admin-policy-inline
+aws iam delete-policy \
+  --policy-arn arn:aws:iam::YOUR_ACCOUNT_ID:policy/blinkysign-iot-admin-policy
+```
+
+For an assumed role, use `list-attached-role-policies` / `detach-role-policy` /
+`delete-role-policy` with `--role-name` instead.
+
+Also check for the deployment role and its inline policy, which `cleanup_aws.py` does not
+remove either:
+
+```bash
+aws iam list-role-policies --role-name blinkysign-iot-role
+aws iam delete-role-policy --role-name blinkysign-iot-role \
+  --policy-name blinkysign-iot-publish-policy
+aws iam delete-role --role-name blinkysign-iot-role
+```
+
+The AWS deployment path is unsupported and known broken — see `legacy/aws/README.md`.
+Remote control is now provided over standard MQTT and requires no AWS account at all.
+
+---
+
 ## Be Very Careful When Setting Up AWS Connectivity
 
 The current version of `blinkysign` requires AWS credentials to deploy the project using local scripts. This gives deployment scripts access to your AWS account, so it's critical to follow safe handling practices.

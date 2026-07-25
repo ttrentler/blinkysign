@@ -10,7 +10,9 @@ import logging
 import threading
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
 from dotenv import load_dotenv
-from led_controller import led_controller
+from led_controller import get_controller
+
+led_controller = get_controller()
 
 # Load environment variables
 load_dotenv()
