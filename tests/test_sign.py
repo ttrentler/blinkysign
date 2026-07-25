@@ -20,11 +20,11 @@ def sign():
     s = build_sign(Config(), controller)
     s._controller = controller  # for assertions
     yield s
-    s._worker.stop()
+    s.stop()
 
 
 def frame(sign):
-    assert sign._worker.wait_idle(timeout=5)
+    assert sign.wait_idle(timeout=5)
     return sign._controller.strips[0].last_frame
 
 
@@ -42,10 +42,10 @@ def test_colours_are_configurable(sign):
     s = build_sign(config, controller)
     try:
         s.set_muted(True)
-        assert s._worker.wait_idle(timeout=5)
+        assert s.wait_idle(timeout=5)
         assert all(px == (1, 2, 3) for px in controller.strips[0].last_frame)
     finally:
-        s._worker.stop()
+        s.stop()
 
 
 def test_turn_off(sign):
@@ -60,7 +60,7 @@ def test_every_advertised_effect_is_runnable(sign):
     assert set(sign.effects) == set(EFFECT_NAMES)
     for name in sign.effects:
         sign.run_effect(name, wait=0.0, cycles=1, duration=0.05, iterations=1)
-        assert sign._worker.wait_idle(timeout=10)
+        assert sign.wait_idle(timeout=10)
     assert sign._worker.is_alive()
 
 
@@ -102,13 +102,13 @@ def test_unknown_colour_falls_back_rather_than_failing(sign, caplog):
     cycles= would hold the strip for hours.
     """
     sign.run_effect("pulse", color="chartreuse-ish", cycles=1, duration=0.05)
-    assert sign._worker.wait_idle(timeout=5)
+    assert sign.wait_idle(timeout=5)
     assert any("unrecognised colour" in r.message for r in caplog.records)
 
 
 def test_effect_colour_accepts_hex(sign):
     sign.run_effect("wipe", color="#0000ff", wait=0.0)
-    assert sign._worker.wait_idle(timeout=5)
+    assert sign.wait_idle(timeout=5)
     # The wipe returns to base afterwards, so assert it ran rather than the
     # final frame: the strip recorded a fully-blue frame at some point.
     frames = [f for _, f in sign._controller.strips[0].frames]

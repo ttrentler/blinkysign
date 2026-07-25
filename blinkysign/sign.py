@@ -124,6 +124,19 @@ class SignController:
     def set_hardware_status(self, available: bool, backend: str) -> None:
         self._state.set_hardware(available, backend)
 
+    # -- lifecycle ------------------------------------------------------
+
+    def add_listener(self, listener):
+        """Observe state changes. Used by the MQTT bridge to publish."""
+        return self._state.add_listener(listener)
+
+    def wait_idle(self, timeout: Optional[float] = None) -> bool:
+        """Block until the LED worker has finished its queued work."""
+        return self._worker.wait_idle(timeout=timeout)
+
+    def stop(self, timeout: float = 2.0) -> None:
+        self._worker.stop(timeout=timeout)
+
 
 def build_sign(config: Config, controller) -> "SignController":
     """Wire a controller, state object, worker and facade together."""

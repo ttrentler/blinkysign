@@ -126,8 +126,8 @@
         <div class="form-group">
             <label for="apiEndpoint">Select API Endpoint:</label>
             <select id="apiEndpoint" onchange="updateApiEndpoint()">
-                <option value="local">Local (http://localhost:5000)</option>
-                <option value="aws">AWS (API_GATEWAY_URL_PLACEHOLDER)</option>
+                <option value="local">This sign</option>
+                <option value="remote" id="remoteOption" hidden>Remote</option>
                 <option value="custom">Custom</option>
             </select>
         </div>
@@ -139,25 +139,15 @@
                 <button onclick="setCustomEndpoint()">Set Endpoint</button>
             </div>
         </div>
-        <p>Current endpoint: <span id="currentEndpoint">http://localhost:5000</span></p>
+        <p>Current endpoint: <span id="currentEndpoint">this sign</span></p>
         
-        <div class="api-key-section">
+        <div class="api-key-section" id="apiKeySection" hidden>
             <div class="form-group">
-                <label for="apiKey">API Key (required for AWS endpoint):</label>
-                <input type="text" id="apiKey" placeholder="Enter your API key" value="API_KEY_PLACEHOLDER">
-            </div>
-        </div>
-        
-        <div class="cors-proxy-section">
-            <h3>CORS Proxy for AWS</h3>
-            <div class="form-group">
-                <label for="useProxy">
-                    <input type="checkbox" id="useProxy" checked> 
-                    Use CORS proxy for AWS requests (helps with CORS errors)
-                </label>
-                <p style="font-size: 0.9em; color: #856404;">
-                    If you're having trouble connecting to AWS API Gateway due to CORS errors, 
-                    this option will route requests through a public CORS proxy.
+                <label for="apiKey">API token:</label>
+                <input type="password" id="apiKey" placeholder="Enter your API token"
+                       autocomplete="off" oninput="saveApiKey()">
+                <p style="font-size: 0.9em; color: #555;">
+                    Stored in this browser only. It is never written into this page.
                 </p>
             </div>
         </div>
@@ -254,22 +244,23 @@
     </div>
 
     <script>
-        // API endpoints
+        // The panel is served by the sign itself, so the default endpoint is
+        // the empty string: every request is same-origin and relative. This
+        // page is never rewritten at deploy time; runtime settings come from
+        // /api/config instead.
         const endpoints = {
-            local: window.location.hostname === 'localhost' ? 'http://localhost:5000' : `http://${window.location.hostname}:5000`,
-            aws: 'API_GATEWAY_URL_PLACEHOLDER',
+            local: '',
+            remote: null,
             custom: ''
         };
-        
-        // CORS proxy URL
-        const corsProxyUrl = 'https://corsproxy.io/?';
-        
-        // Current API endpoint
+
         let currentEndpoint = endpoints.local;
+        let serverConfig = null;
         
         // Update the displayed current endpoint
         function displayCurrentEndpoint() {
-            document.getElementById('currentEndpoint').textContent = currentEndpoint;
+            document.getElementById('currentEndpoint').textContent =
+                currentEndpoint || `${window.location.origin} (this sign)`;
         }
         
         // Update API endpoint based on selection
@@ -301,33 +292,42 @@
             document.getElementById('responseText').textContent = JSON.stringify(response);
         }
         
-        // Get API key if needed
+        // The API token lives in this browser's localStorage. It is never
+        // written into this file -- the deploy script used to substitute it
+        // into a git-tracked page, which made committing a live key easy.
+        function loadApiKey() {
+            const stored = localStorage.getItem('blinkysign.apiToken') || '';
+            document.getElementById('apiKey').value = stored;
+        }
+
+        function saveApiKey() {
+            const value = document.getElementById('apiKey').value.trim();
+            if (value) {
+                localStorage.setItem('blinkysign.apiToken', value);
+            } else {
+                localStorage.removeItem('blinkysign.apiToken');
+            }
+        }
+
         function getHeaders() {
             const headers = {
                 'Content-Type': 'application/json'
             };
-            
-            const apiKey = document.getElementById('apiKey').value.trim();
+
+            const apiKey = (document.getElementById('apiKey').value || '').trim();
             if (apiKey) {
                 headers['x-api-key'] = apiKey;
             }
-            
+
             return headers;
         }
-        
-        // Get the appropriate URL based on endpoint and proxy settings
+
         function getApiUrl(endpoint) {
-            const useProxy = document.getElementById('useProxy').checked;
-            const isAws = currentEndpoint === endpoints.aws || 
-                         (currentEndpoint === endpoints.custom && 
-                          currentEndpoint.includes('execute-api.') && 
-                          currentEndpoint.includes('amazonaws.com'));
-            
-            if (useProxy && isAws) {
-                return corsProxyUrl + encodeURIComponent(currentEndpoint + endpoint);
-            } else {
-                return currentEndpoint + endpoint;
-            }
+            // No third-party proxy. The panel is same-origin with the API, so
+            // there is no CORS problem to work around; a remote endpoint with
+            // broken CORS should fix its own CORS rather than have this page
+            // route an API token through someone else's server.
+            return currentEndpoint + endpoint;
         }
         
         // Generic function to make API calls
@@ -370,14 +370,9 @@
         }
         
         async function setMutedWithPulse(muted) {
-            // First trigger a 3-second pulse effect with the appropriate color
-            await callApi('/effects/pulse', 'PUT', {
-                color: muted ? 'green' : 'red',
-                cycles: 1,
-                duration: 3.0
-            });
-            
-            // Then set the muted state
+            // Effects are asynchronous now, so the old "pulse for three
+            // seconds, then set" sequence would have the /set cancel the pulse
+            // a few milliseconds after it started. Set the state directly.
             await callApi('/set', 'PUT', { muted: muted });
         }
         
@@ -426,21 +421,44 @@
         
         // Check health on load
         window.onload = async function() {
-            // Set AWS as default endpoint
-            document.getElementById('apiEndpoint').value = 'aws';
+            // Default to the sign that served this page. The old default was
+            // the AWS option, so an undeployed checkout fired its first request
+            // at the un-substituted placeholder string.
+            document.getElementById('apiEndpoint').value = 'local';
             updateApiEndpoint();
-            
+            loadApiKey();
+
             try {
-                const headers = getHeaders();
-                const url = getApiUrl('/health');
-                
-                const response = await fetch(url, {
-                    headers: headers
-                });
+                const response = await fetch('/api/config');
+                if (response.ok) {
+                    serverConfig = await response.json();
+
+                    if (serverConfig.remote_endpoint) {
+                        endpoints.remote = serverConfig.remote_endpoint;
+                        const option = document.getElementById('remoteOption');
+                        option.hidden = false;
+                        option.textContent = `Remote (${serverConfig.remote_endpoint})`;
+                    }
+                    if (serverConfig.requires_api_key) {
+                        document.getElementById('apiKeySection').hidden = false;
+                    }
+                }
+            } catch (error) {
+                console.warn('Could not read /api/config:', error);
+            }
+
+            try {
+                const response = await fetch(getApiUrl('/health'), { headers: getHeaders() });
                 const data = await response.json();
-                
+
                 if (data.status === 'healthy') {
                     updateStatus('Connected', data);
+                } else if (data.status === 'degraded') {
+                    updateStatus(
+                        `Connected, but the LEDs are not available (${data.leds ? data.leds.backend : 'unknown'} backend). ` +
+                        'On a Pi this usually means SPI is not enabled yet.',
+                        data
+                    );
                 } else {
                     updateStatus('API is not healthy', data);
                 }
