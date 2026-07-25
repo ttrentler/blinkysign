@@ -18,8 +18,11 @@ from dotenv import load_dotenv
 from werkzeug.serving import make_server
 
 from blinkysign import __version__
+from blinkysign.button import build_button
 from blinkysign.config import Config
+from blinkysign.discovery import register_mdns
 from blinkysign.leds import get_controller
+from blinkysign.mqtt import build_bridge
 from blinkysign.server import create_app
 from blinkysign.sign import build_sign
 
@@ -50,6 +53,10 @@ def main() -> int:
 
     sign = build_sign(config, controller)
     sign.refresh()  # paint the startup state
+
+    bridge = build_bridge(config.mqtt, sign)
+    button = build_button(config.button_pin, sign)
+    mdns = register_mdns(config)
 
     shutdown = threading.Event()
 
@@ -84,6 +91,12 @@ def main() -> int:
     finally:
         logger.info("Shutting down: turning the LEDs off")
         server.shutdown()
+        for component in (mdns, button, bridge):
+            if component is not None:
+                try:
+                    component.stop()
+                except Exception:
+                    logger.exception("error stopping %r", component)
         try:
             sign.turn_off()
             sign.wait_idle(timeout=2.0)
