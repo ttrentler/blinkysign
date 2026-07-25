@@ -1,6 +1,6 @@
 # Stream Deck Button Integration
 
-These HTML files allow you to control BlinkySign using an Elgato Stream Deck.
+These HTML files let you control BlinkySign from an Elgato Stream Deck.
 
 ## Setup Instructions
 
@@ -11,28 +11,56 @@ These HTML files allow you to control BlinkySign using an Elgato Stream Deck.
 
 ## Available Buttons
 
-- **mute.html**: Sets the BlinkySign to muted state (red)
-- **unmute.html**: Sets the BlinkySign to unmuted state (green)
-- **toggle.html**: Toggles between muted and unmuted states
+- **mute.html**: Sets the BlinkySign to its muted colour
+- **unmute.html**: Sets the BlinkySign to its unmuted colour
+- **toggle.html**: Toggles between muted and unmuted
 - **rainbow.html**: Triggers the rainbow effect
-- **aws-mute.html**: Template for AWS API Gateway integration (requires customization)
+- **aws-mute.html**: See the note below — this one no longer applies
 
-## Local vs AWS
+## Set the hostname before using these
 
-- The standard HTML files are configured for local network use with `http://raspberrypi.local:5000`
-- For AWS API Gateway, use the aws-*.html templates and customize with your API Gateway URL and API key
+These files point at `http://raspberrypi.local:5000`, the Pi's default
+hostname. BlinkySign now *also* advertises itself over mDNS as
+`http://blinkysign.local:5000`.
 
-## Customization
+Both may work, or only one, depending on your setup:
 
-Edit the HTML files to:
-1. Change the hostname if your Raspberry Pi has a different hostname
-2. Add your AWS API Gateway URL and API key for cloud control
-3. Adjust the auto-close timeout (default is 1 second)
+- `raspberrypi.local` works if you never changed the Pi's hostname.
+- `blinkysign.local` works once BlinkySign is running, unless another device on
+  the network already claimed the name — Avahi silently renames the second one
+  to `blinkysign-2.local`. The service log records the name it actually
+  registered.
+
+If neither resolves — mDNS is unreliable on some networks, and on much of
+Android — use the Pi's IP address. The installer prints it when it finishes.
+
+Edit the URL in each file to whichever of the three works for you. Nothing
+rewrites these files automatically.
+
+## If you set an API token
+
+If `BLINKYSIGN_API_TOKEN` is set on the sign, add the header to each `fetch`
+call in these files:
+
+```js
+headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'your-token'
+}
+```
+
+## About aws-mute.html
+
+This targeted the AWS API Gateway deployment, which has been retired — it did
+not work, and the reasons are in [../legacy/aws/README.md](../legacy/aws/README.md).
+The file is kept only as a shape to copy for any HTTPS endpoint you put in
+front of the sign. For remote control, use the MQTT support described in the
+main [README](../README.md).
 
 ## Troubleshooting
 
-If the buttons don't work:
-1. Make sure your BlinkySign is running and accessible
-2. Check that the hostname or IP address in the HTML files is correct
-3. Verify that your network allows the connection
-4. For AWS endpoints, ensure your API key is valid
+1. Confirm the sign responds: `curl http://blinkysign.local:5000/health`
+2. If that returns `"status": "degraded"`, the sign is running but its LEDs are
+   not available — usually SPI not enabled, or a reboot still pending
+3. Check that the hostname or IP in the HTML file is reachable from your computer
+4. If you set an API token, make sure the header is present
