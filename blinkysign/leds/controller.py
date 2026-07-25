@@ -209,57 +209,78 @@ class LEDController:
             pos -= 170
             return (0, pos * 3, 255 - pos * 3)
 
-    def rainbow_cycle(self, wait=0.01):
+    # -- effects --------------------------------------------------------
+    #
+    # Each effect is a generator that paints one frame and yields how long the
+    # caller should wait before the next one. It does not sleep itself.
+    #
+    # That inversion is what makes effects interruptible: the LED worker drives
+    # these with Event.wait(delay), which sleeps and notices a cancellation in
+    # the same call, so a new command preempts a running animation within one
+    # frame. When the effects called time.sleep() internally and ran inside the
+    # Flask request handler, a pulse(cycles=10) held the strip -- and the HTTP
+    # response -- for about ten seconds with no way to interrupt it.
+    #
+    # The blocking wrappers below preserve the original API for the CLI.
+
+    def rainbow_frames(self, wait=0.01):
         """Rainbow cycle animation across all strips"""
         for j in range(255):
             for strip in self.strips:
                 for i in range(len(strip)):
                     strip[i] = self._wheel((i + j) & 255)
                 strip.show()
-            time.sleep(wait)
+            yield wait
 
-    def theater_chase(self, color, wait=0.05, iterations=10):
+    def theater_chase_frames(self, color, wait=0.05, iterations=10):
         """Movie theater light style chaser animation."""
-        for _ in range(iterations):
-            for q in range(3):
-                for strip in self.strips:
-                    for i in range(q, len(strip), 3):
-                        strip[i] = color
-                    strip.show()
+        try:
+            for _ in range(iterations):
+                for q in range(3):
+                    for strip in self.strips:
+                        for i in range(q, len(strip), 3):
+                            strip[i] = color
+                        strip.show()
 
-                time.sleep(wait)
+                    yield wait
 
-                for strip in self.strips:
-                    for i in range(q, len(strip), 3):
-                        strip[i] = OFF
-                    strip.show()
+                    for strip in self.strips:
+                        for i in range(q, len(strip), 3):
+                            strip[i] = OFF
+                        strip.show()
+        finally:
+            # A cancelled chase would otherwise leave every third pixel lit.
+            for strip in self.strips:
+                strip.fill(OFF)
+                strip.show()
 
-    def color_wipe(self, color, wait=0.05):
+    def color_wipe_frames(self, color, wait=0.05):
         """Fill the dots one after the other with a color."""
         for i in range(self._max_len()):
             for strip in self.strips:
                 if i < len(strip):
                     strip[i] = color
                     strip.show()
-            time.sleep(wait)
+            yield wait
 
-    def pulse(self, color, cycles=3, duration=1.0):
+    def pulse_frames(self, color, cycles=3, duration=1.0):
         """Pulse effect on all strips"""
         steps = 50
+        step_delay = duration / (2 * steps)
         try:
             for _ in range(cycles):
                 # Fade in
                 for i in range(steps):
                     self._render_at_brightness(color, i / steps)
-                    time.sleep(duration / (2 * steps))
+                    yield step_delay
 
                 # Fade out
                 for i in range(steps, 0, -1):
                     self._render_at_brightness(color, i / steps)
-                    time.sleep(duration / (2 * steps))
+                    yield step_delay
         finally:
-            # Always restore, even if interrupted -- otherwise the strip is
-            # left stuck at whatever brightness the loop last set.
+            # Always restore, even when cancelled mid-fade -- otherwise the
+            # strip is left stuck at whatever brightness the loop last set.
             for strip in self.strips:
                 strip.brightness = self.brightness
 
@@ -268,6 +289,26 @@ class LEDController:
             strip.brightness = brightness
             strip.fill(color)
             strip.show()
+
+    # -- blocking wrappers, for the command-line self-test ---------------
+
+    @staticmethod
+    def _drain(frames):
+        for delay in frames:
+            if delay:
+                time.sleep(delay)
+
+    def rainbow_cycle(self, wait=0.01):
+        self._drain(self.rainbow_frames(wait))
+
+    def theater_chase(self, color, wait=0.05, iterations=10):
+        self._drain(self.theater_chase_frames(color, wait, iterations))
+
+    def color_wipe(self, color, wait=0.05):
+        self._drain(self.color_wipe_frames(color, wait))
+
+    def pulse(self, color, cycles=3, duration=1.0):
+        self._drain(self.pulse_frames(color, cycles, duration))
 
 
 # Process-local controller. Built lazily so that importing this module never
